@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.signal import convolve2d
 
 def combined_propagation(E, wavelength, z, dx, threshold=1.0):
     """
@@ -45,33 +46,20 @@ def fresnel_propagation(E, wavelength, z, dx):
     """
     Propagate an input field E using the Fresnel approximation.
     """
+
     N = E.shape[0]
-
-    k = 2 * np.pi / wavelength
-
-    x = np.linspace(-N/2*dx, N/2*dx, N)
-    y = x.copy()
-    X, Y = np.meshgrid(x, y)
-
-    Q_in = np.exp(1j * k/(2*z) * (X**2 + Y**2))
-
-    U1 = E * Q_in
-    U2 = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(U1)))
-
-    print(np.abs(U2)**2)
 
     fx = np.fft.fftshift(np.fft.fftfreq(N, d=dx))
     fy = np.fft.fftshift(np.fft.fftfreq(N, d=dx))
+    FX, FY = np.meshgrid(fx, fy)
 
-    print(fx)
+    k = 2 * np.pi / wavelength
 
-    x_out = wavelength*z*fx
-    y_out = wavelength*z*fy
+    H = np.exp(1j*k*z)*np.exp(-1j * np.pi * wavelength * z * (FX**2 + FY**2))
 
-    print(x_out)
-    X_out, Y_out = np.meshgrid(x_out, y_out)  # Create meshgrid for correct shape
+    input_spectrum = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(E)))
 
-    Q_out = np.exp(1j * k/(2*z) * (X_out**2 + Y_out**2))
-    U_out = np.exp(1j * k * z) / (1j * wavelength * z) * U2 * Q_out
-    
-    return U_out, x_out, y_out
+    output_spectrum = input_spectrum * H
+    output_field = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(output_spectrum)))
+
+    return output_field
