@@ -41,7 +41,7 @@ def fraunhofer_propagation(E, wavelength, z, dx):
     k = 2*np.pi/wavelength
 
     # Calculate the output field using the Fraunhofer approximation
-    output_field = 1/(1j * wavelength * z) * np.exp(1j * k * z) * np.exp(1j*np.pi/(wavelength*z)*(X_det**2+Y_det**2))*input_spectrum
+    output_field = np.exp(1j * k * z) * np.exp(1j*np.pi/(wavelength*z)*(X_det**2+Y_det**2)) * input_spectrum
     output_field = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(output_field)))
 
     return output_field
