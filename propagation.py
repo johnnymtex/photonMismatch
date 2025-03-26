@@ -27,20 +27,26 @@ def fraunhofer_propagation(E, wavelength, z, dx):
     """
     N = E.shape[0]
 
-    E_ft = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(E)))
-
     fx = np.fft.fftshift(np.fft.fftfreq(N, d=dx))
     fy = np.fft.fftshift(np.fft.fftfreq(N, d=dx))
+    FX, FY = np.meshgrid(fx, fy)
 
-    x_det = wavelength * z * fx
-    y_det = wavelength * z * fy
+    # Fourier transform of the input field
+    input_spectrum = np.fft.fft2(E)
 
-    k = 2 * np.pi / wavelength
-    scaling = np.exp(1j * k * z) / (1j * wavelength * z)
+    # Shift zero frequency component to the center
+    input_spectrum_shifted = np.fft.fftshift(input_spectrum)
 
-    E_out = scaling * E_ft * (dx ** 2)
+    # Coordinates in the observation plane
+    x_prime = FX * wavelength * z
+    y_prime = FY * wavelength * z
 
-    return E_out, x_det, y_det
+    # Calculate the output field using the Fraunhofer approximation
+    output_field = (np.exp(1j * 2 * np.pi / wavelength * z) / (1j * wavelength * z) *
+                    np.exp(1j * np.pi / (wavelength * z) * (x_prime**2 + y_prime**2)) *
+                    input_spectrum_shifted)
+
+    return output_field
 
 def fresnel_propagation(E, wavelength, z, dx):
     """
