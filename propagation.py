@@ -32,19 +32,17 @@ def fraunhofer_propagation(E, wavelength, z, dx):
     FX, FY = np.meshgrid(fx, fy)
 
     # Fourier transform of the input field
-    input_spectrum = np.fft.fft2(E)
-
-    # Shift zero frequency component to the center
-    input_spectrum_shifted = np.fft.fftshift(input_spectrum)
+    input_spectrum = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(E)))
 
     # Coordinates in the observation plane
-    x_prime = FX * wavelength * z
-    y_prime = FY * wavelength * z
+    X_det = FX * wavelength * z
+    Y_det = FY * wavelength * z
+
+    k = 2*np.pi/wavelength
 
     # Calculate the output field using the Fraunhofer approximation
-    output_field = (np.exp(1j * 2 * np.pi / wavelength * z) / (1j * wavelength * z) *
-                    np.exp(1j * np.pi / (wavelength * z) * (x_prime**2 + y_prime**2)) *
-                    input_spectrum_shifted)
+    output_field = 1/(1j * wavelength * z) * np.exp(1j * k * z) * np.exp(1j*np.pi/(wavelength*z)*(X_det**2+Y_det**2))*input_spectrum
+    output_field = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(output_field)))
 
     return output_field
 
