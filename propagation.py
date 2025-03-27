@@ -46,11 +46,11 @@ def fraunhofer_propagation(E, wavelength, z, dx):
 
     return output_field
 
+
 def fresnel_propagation(E, wavelength, z, dx):
     """
     Propagate an input field E using the Fresnel approximation.
     """
-
     N = E.shape[0]
 
     fx = np.fft.fftshift(np.fft.fftfreq(N, d=dx))
