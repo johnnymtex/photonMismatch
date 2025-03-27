@@ -41,7 +41,7 @@ def fraunhofer_propagation(E, wavelength, z, dx):
     k = 2*np.pi/wavelength
 
     # Calculate the output field using the Fraunhofer approximation
-    output_field = np.exp(1j * k * z) * np.exp(1j*np.pi/(wavelength*z)*(X_det**2+Y_det**2)) * input_spectrum
+    output_field = np.exp(1j * k * z) * np.exp(-1j*k/(2*z)*(X_det**2+Y_det**2)) * input_spectrum
     output_field = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(output_field)))
 
     return output_field
@@ -59,7 +59,7 @@ def fresnel_propagation(E, wavelength, z, dx):
 
     k = 2 * np.pi / wavelength
 
-    H = np.exp(1j*k*z)*np.exp(-1j * np.pi * wavelength * z * (FX**2 + FY**2))
+    H = np.exp(-1j*k*z)*np.exp(-1j * np.pi * wavelength * z * (FX**2 + FY**2))
 
     input_spectrum = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(E)))
 
