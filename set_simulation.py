@@ -12,90 +12,11 @@ from scipy.signal import fftconvolve
 # Function 1: Simulation of intensity images (binned) for a multi-shot experiment
 # Run this function to simulate intensity images for num_shots shots.
 # ----------------------------------------------------------------------------
-def simulate_intensity_images_original(X_source, Y_source, num_shots, num_modes_per_shot, I0, z_prop, 
-                              gauss_width, stripe_period,
-                              current_object_mask_func,
-                              num_pixels, dx_source, angle, wavelength,
-                              bin_factor, gain, QE, ADC_bits):
-    """
-    Simulate intensity images from a multi-shot experiment.
-    
-    Parameters:
-      X_source, Y_source: 2D coordinate grids in the source plane (m)
-      num_shots: number of shots (different grating masks)
-      num_modes_per_shot: number of modes per shot (random phase realizations)
-      I0: source intensity (photons per pixel at source)
-      z_prop: propagation distance (m)
-      gauss_width: diameter (or width) of the Gaussian aperture (m)
-      stripe_period: period of the grating (m)
-      current_object_mask_func: function to generate a grating mask;
-          Called as: current_object_mask_func(X, Y, period, duty_cycle, angle, smoothing_fraction, dx_source)
-      num_pixels: simulation grid size (assumed square)
-      dx_source: pixel size in the source plane (m)
-      angle: angle for the grating mask (radians)
-      wavelength: wavelength (m)
-      bin_factor: binning factor to convert simulation resolution to detector resolution
-      gain, QE, ADC_bits: parameters for CCD_detection_binned.
-      
-    Returns:
-      intensity_images: list of binned intensity images (one per shot)
-      field_images: list of the last propagated field from each shot (optional)
-    """
-    
-    intensity_images = []
-    field_images = []
-    
-    # Create the Gaussian mask using the provided gauss_width.
-    gaussian_mask = create_gaussian_mask(X_source, Y_source, diameter=gauss_width)
-    
-    for shot in range(num_shots):
-        # Generate a grating mask (one per shot) using the provided stripe_period.
-        # grating_mask = current_object_mask_func(X_source, Y_source, period=stripe_period, duty_cycle=0.7, angle=angle, smoothing_fraction=0.1, dx_source=dx_source)
-
-        # Combine with the Gaussian mask to form the overall object mask.
-        current_object_mask = gaussian_mask #* grating_mask
-        
-        # Compute intensity per mode.
-        intensity_per_mode = I0 * np.sum(current_object_mask) / num_modes_per_shot
-        
-        # Initialize accumulator for shot's full-resolution intensity.
-        shot_intensity = np.zeros((num_pixels, num_pixels))
-
-        for mode in range(num_modes_per_shot):
-            # Generate a new random phase pattern.
-            random_phase = 0 #np.random.uniform(0, 2*np.pi, (num_pixels, num_pixels))
-            E_source = np.sqrt(intensity_per_mode)/num_pixels * np.exp(1j * random_phase)
-            # Apply the object mask.
-            current_object_mask = create_gaussian_mask(X_source, Y_source, diameter=gauss_width)
-            E_after_object = E_source * current_object_mask
-            if shot == 0 and mode == 0:  # Plot only for the first shot and mode
-                # Plot amplitude and phase *after* the random phase is applied
-                intensity_to_plot = np.abs(E_after_object**2) * num_modes_per_shot
-                plt.figure(figsize=(8, 6))
-                plt.imshow(intensity_to_plot, cmap='inferno')
-                plt.title(f"Total Source Intensity: {np.sum(intensity_to_plot):.2e} photons per pulse")
-                plt.colorbar()
-                plt.show()
-            # Propagate the field.
-            E_det = external_fresnel_propagation(E_after_object, wavelength, z_prop, dx_source)
-            I_det = np.abs(E_det)**2
-            shot_intensity += I_det
-        
-        # Optionally store the last propagated field.
-        field_images.append(E_det)
-        # Apply CCD detection (including binning, Poisson noise, etc.)
-        shot_intensity_binned = CCD_detection_binned(shot_intensity, bin_factor=bin_factor, gain=gain, QE=QE, ADC_bits=ADC_bits)
-        intensity_images.append(shot_intensity_binned)
-        
-        print(f"Completed Shot {shot+1}/{num_shots} - Photons per pixel: {np.sum(shot_intensity_binned)/((num_pixels/bin_factor)**2):.2f}")
-    
-    return intensity_images, field_images
-
 def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot, I0, z_prop, 
                               gauss_width, stripe_period,
                               current_object_mask_func,
                               num_pixels, dx_source, angle, wavelength,
-                              bin_factor, gain, QE, ADC_bits):
+                              bin_factor, gain, QE, ADC_bits, padding_factor=1):
     """
     Simulate intensity images from a multi-shot experiment.
     
@@ -156,7 +77,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
                 plt.colorbar()
                 plt.show()
             # Propagate the field.
-            E_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source)
+            E_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source, padding_factor=padding_factor)
             I_det = np.abs(E_det)**2
             shot_intensity += I_det
         

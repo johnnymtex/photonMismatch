@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.signal import convolve2d
 
-def combined_propagation(E, wavelength, z, dx, threshold=1.0):
+def combined_propagation(E, wavelength, z, dx, threshold=1.0, padding_factor=1):
     """
     Propagate the field E over distance z using either Fraunhofer or Fresnel propagation,
     depending on the computed Fresnel number.
@@ -13,11 +13,11 @@ def combined_propagation(E, wavelength, z, dx, threshold=1.0):
     
     if Fresnel_number < threshold:
         #print("Using Fraunhofer propagation.")
-        E_out, _, _ = fraunhofer_propagation(E, wavelength, z, dx)  # Unpack and discard x_det, y_det
+        E_out, _, _ = fraunhofer_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_det, y_det
         return E_out
     else:
         #print("Using Fresnel propagation.")
-        E_out, _, _ = fresnel_propagation(E, wavelength, z, dx)  # Unpack and discard x_out, y_out
+        E_out, _, _ = fresnel_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_out, y_out
         return E_out
     
     

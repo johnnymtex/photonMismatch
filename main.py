@@ -52,7 +52,8 @@ intensity_images, field_images = simulate_intensity_images(X_source, Y_source, s
                                                           setup.gauss_width, setup.stripe_period,
                                                           current_object_mask_func,
                                                           setup.num_pixels, dx_source, setup.angle, setup.wavelength,
-                                                          bin_factor, setup.gain, setup.QE, setup.ADC_bits)
+                                                          bin_factor, setup.gain, setup.QE, setup.ADC_bits,
+                                                          padding_factor=8)
 
 # Compute g² and vertical lineout.
 avg_intensity, autocorr_avg, vertical_sum, I_per_pix = compute_g2(intensity_images)
