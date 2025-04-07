@@ -18,7 +18,7 @@ light = 3e8
 plt.rcParams['figure.figsize'] = (8,6)
 
 # initializing variables
-setup = inp.Config(sys.argv[1])
+setup = inp.Config('inp_files/setup.inp')
 
 dx_source = 50e-6/setup.num_pixels
 dx_det_sim = (setup.wavelength*setup.z_prop)/(setup.num_pixels*dx_source)
@@ -53,7 +53,7 @@ intensity_images, field_images = simulate_intensity_images(X_source, Y_source, s
                                                           current_object_mask_func,
                                                           setup.num_pixels, dx_source, setup.angle, setup.wavelength,
                                                           bin_factor, setup.gain, setup.QE, setup.ADC_bits,
-                                                          padding_factor=8)
+                                                          padding_factor=1)
 
 # Compute g² and vertical lineout.
 avg_intensity, autocorr_avg, vertical_sum, I_per_pix = compute_g2(intensity_images)
@@ -63,6 +63,11 @@ print("Min =", np.min(avg_intensity), "Max =", np.max(avg_intensity), "Avg =", n
 print(f"Photons per pixel: {I_per_pix:.2f}")
 
 # Visualization: Show the autocorrelation image (g² proxy)
+plt.figure()
+plt.plot(autocorr_avg[int(len(autocorr_avg)/2)])
+plt.show()
+
+
 plt.figure()
 extent = [0, setup.detector_pixel_size*(setup.num_pixels/bin_factor)*1e6, 0, setup.detector_pixel_size*(setup.num_pixels/bin_factor)*1e6]
 plt.imshow(autocorr_avg, origin='lower', cmap='inferno', norm=mcolors.LogNorm(), extent=extent)

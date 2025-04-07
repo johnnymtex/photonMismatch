@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from focal_spot_pattern import create_gaussian_mask
-from propagation import combined_propagation, external_fresnel_propagation
+from propagation import combined_propagation
 from detection import CCD_detection_binned
 
 from scipy.signal import fftconvolve
@@ -63,7 +63,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
 
         for mode in range(num_modes_per_shot):
             # Generate a new random phase pattern.
-            random_phase = 0 #np.random.uniform(0, 2*np.pi, (num_pixels, num_pixels))
+            random_phase = np.random.uniform(0, 2*np.pi, (num_pixels, num_pixels))
             E_source = np.sqrt(intensity_per_mode) * np.exp(1j * random_phase)
             # Apply the object mask.
             current_object_mask = create_gaussian_mask(X_source, Y_source, diameter=gauss_width)
@@ -77,7 +77,8 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
                 plt.colorbar()
                 plt.show()
             # Propagate the field.
-            E_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source, padding_factor=padding_factor)
+            E_det, start, end = combined_propagation(E_after_object, wavelength, z_prop, dx_source, padding_factor=padding_factor)
+            E_det = E_det[start:end, start:end]
             I_det = np.abs(E_det)**2
             shot_intensity += I_det
         

@@ -13,12 +13,12 @@ def combined_propagation(E, wavelength, z, dx, threshold=1.0, padding_factor=1):
     
     if Fresnel_number < threshold:
         #print("Using Fraunhofer propagation.")
-        E_out, _, _ = fraunhofer_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_det, y_det
-        return E_out
+        E_out, start, end = fraunhofer_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_det, y_det
+        return E_out, start, end
     else:
         #print("Using Fresnel propagation.")
-        E_out, _, _ = fresnel_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_out, y_out
-        return E_out
+        E_out, start, end = fresnel_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_out, y_out
+        return E_out, start, end
     
     
 def fraunhofer_propagation(E, wavelength, z, dx, padding_factor=1):

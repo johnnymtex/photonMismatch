@@ -1,4 +1,5 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
 # -----------------------------------------------------------------------------
 # Rebin the simulation images to match the detector's pixel sizes 
@@ -28,11 +29,15 @@ def CCD_detection_binned(intensity, bin_factor, gain=10, QE=0.57, ADC_bits=18):
     """
     # First, rebin the high-resolution intensity image to the detector pixel scale.
     binned_intensity = rebin_2d(intensity, bin_factor)
+  
+    plt.figure()
+    plt.imshow(binned_intensity)
+    plt.show()
     
     # Now, simulate photon detection using Poisson noise.
     # Here the binned intensity is assumed to represent the mean number of photons per CCD pixel.
     detected = np.random.poisson(binned_intensity) * gain * QE
-    
+
     # Clip values that exceed the ADC maximum
     max_value = 2 ** ADC_bits
     detected[detected > max_value] = max_value
