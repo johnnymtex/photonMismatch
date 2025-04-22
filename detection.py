@@ -11,7 +11,7 @@ def rebin_2d(a, bin_factor):
     ncols = (a.shape[1] // bin_factor) * bin_factor
     a_cropped = a[:nrows, :ncols]
     new_shape = (nrows // bin_factor, bin_factor, ncols // bin_factor, bin_factor)
-    return a_cropped.reshape(new_shape).mean(axis=(1, 3))
+    return a_cropped.reshape(new_shape).sum(axis=(1, 3))
 
 def CCD_detection_binned(intensity, bin_factor, gain=10, QE=0.57, ADC_bits=18):
     """
@@ -29,11 +29,7 @@ def CCD_detection_binned(intensity, bin_factor, gain=10, QE=0.57, ADC_bits=18):
     """
     # First, rebin the high-resolution intensity image to the detector pixel scale.
     binned_intensity = rebin_2d(intensity, bin_factor)
-  
-    plt.figure()
-    plt.imshow(binned_intensity)
-    plt.show()
-    
+
     # Now, simulate photon detection using Poisson noise.
     # Here the binned intensity is assumed to represent the mean number of photons per CCD pixel.
     detected = np.random.poisson(binned_intensity) * gain * QE

@@ -8,7 +8,7 @@ angle = 20
 num_pixels = 500
 
 #spot parameters
-gauss_width = 10e-6
+gauss_width = 15e-6
 stripe_period = 1e-6
 
 # Detector parameters:

@@ -1,9 +1,11 @@
 import json
 import numpy as np
 import matplotlib.pyplot as plt
+import LightPipes as lp
 
 from focal_spot_pattern import create_gaussian_mask
-from propagation import combined_propagation
+from propagation import combined_propagation as my_propagation
+from propagation_LP import combined_propagation
 from detection import CCD_detection_binned
 
 from scipy.signal import fftconvolve
@@ -16,7 +18,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
                               gauss_width, stripe_period,
                               current_object_mask_func,
                               num_pixels, dx_source, angle, wavelength,
-                              bin_factor, gain, QE, ADC_bits, padding_factor=1):
+                              bin_factor, gain, QE, ADC_bits):
     """
     Simulate intensity images from a multi-shot experiment.
     
@@ -56,7 +58,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
         current_object_mask = gaussian_mask #* grating_mask
         
         # Compute intensity per mode.
-        intensity_per_mode = I0 / num_modes_per_shot
+        intensity_per_mode = I0 * np.ones((num_pixels, num_pixels)) / num_modes_per_shot
         
         # Initialize accumulator for shot's full-resolution intensity.
         shot_intensity = np.zeros((num_pixels, num_pixels))
@@ -65,9 +67,14 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
             # Generate a new random phase pattern.
             random_phase = np.random.uniform(0, 2*np.pi, (num_pixels, num_pixels))
             E_source = np.sqrt(intensity_per_mode) * np.exp(1j * random_phase)
+            
             # Apply the object mask.
             current_object_mask = create_gaussian_mask(X_source, Y_source, diameter=gauss_width)
             E_after_object = E_source * current_object_mask
+            plt.figure()
+            plt.imshow(np.abs(E_after_object)**2)
+            plt.title("gauss mask, random phase")
+            plt.show()
             if shot == 0 and mode == 0:  # Plot only for the first shot and mode
                 # Plot amplitude and phase *after* the random phase is applied
                 intensity_to_plot = np.abs(E_after_object**2) * num_modes_per_shot
@@ -77,9 +84,12 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
                 plt.colorbar()
                 plt.show()
             # Propagate the field.
-            E_det, start, end = combined_propagation(E_after_object, wavelength, z_prop, dx_source, padding_factor=padding_factor)
-            E_det = E_det[start:end, start:end]
+            E_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source)
             I_det = np.abs(E_det)**2
+            plt.figure()
+            plt.imshow(I_det, cmap="gist_heat")
+            plt.title("I_det")
+            plt.show()
             shot_intensity += I_det
         
         # Optionally store the last propagated field.
@@ -91,7 +101,6 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
         print(f"Completed Shot {shot+1}/{num_shots} - Photons per pixel: {np.sum(shot_intensity_binned)/((num_pixels/bin_factor)**2):.2f}")
     
     return intensity_images, field_images
-
 
 # ----------------------------------------------------------------------------
 # Function 2: Compute g² from the intensity images

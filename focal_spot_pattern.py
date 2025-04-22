@@ -10,14 +10,13 @@ def create_slit_mask(X, Y):
     mask[np.abs(X) > slit_width/2] = 0
     return mask
 
-def create_gaussian_mask(X, Y, diameter=20e-6, sigma=None):
+def create_gaussian_mask(X, Y, w=20e-6):
     """
     Create a Gaussian amplitude mask with a specified 1/e² intensity diameter.
     The amplitude falls to 1/e at a radius of (diameter/2).
     """
-    if sigma is None:
-        sigma = diameter / 2
-    mask = np.exp(- (X**2 + Y**2) / (2*sigma**2))
+
+    mask = np.sqrt(np.exp(- 2*(X**2 + Y**2) / (w*w)))
     return mask
 
 def create_slit_pattern(X, Y, period=1e-6, duty_cycle=0.5, angle=0):
