@@ -69,7 +69,7 @@ def fresnel_propagation(E, wavelength, z, dx, padding_factor=1):
 
     k = 2 * np.pi / wavelength
 
-    H = np.exp(1j*k*z)*np.exp(-1j * np.pi * wavelength * z * (FX**2 + FY**2))
+    H = np.exp(-1j*k*z)*np.exp(-1j * np.pi * wavelength * z * (FX**2 + FY**2))
 
     input_spectrum = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(padded_E)))
 
