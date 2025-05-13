@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 
 from focal_spot_pattern import create_gaussian_mask, create_slit_pattern_rand_smooth
-from set_simulation import simulate_intensity_images, compute_g2, save_results
+from set_simulation import simulate_intensity_images, compute_g2, save_results, compute_inclined_lineout
 from scipy.ndimage import map_coordinates
 
 #defining constants
@@ -19,22 +19,34 @@ plt.rcParams['figure.figsize'] = (8,6)
 
 # initializing variables
 setup = inp.Config('inp_files/setup.inp')
+setup.padding_factor = int(setup.padding_factor)
 
-dx_source = 50e-6/setup.num_pixels
-dx_det_sim = (setup.wavelength*setup.z_prop)/(setup.num_pixels*dx_source)
+dx_source = setup.grid_size/setup.num_pixels
+#x_det_sim = np.fft.fftshift(np.fft.fftfreq(setup.num_pixels, d=dx_source))*setup.wavelength*setup.z_prop
+#dx_det_sim = x_det_sim[1]-x_det_sim[0]
+#print(dx_source)
+#print(dx_det_sim)
+dx_det_sim = dx_source #(setup.wavelength*setup.z_prop)/(setup.num_pixels*dx_source)
 bin_factor = int(round(setup.detector_pixel_size/dx_det_sim))
 
 #auxiliary variables
 source_size=dx_source*setup.num_pixels
-x_source = np.linspace(-source_size/2, source_size/2, setup.num_pixels)
-y_source = np.linspace(-source_size/2, source_size/2, setup.num_pixels)
+x_source = np.linspace(-source_size/2, source_size/2, setup.num_pixels, endpoint=False)
+y_source = np.linspace(-source_size/2, source_size/2, setup.num_pixels, endpoint=False)
 X_source, Y_source = np.meshgrid(x_source, y_source)
 
-gaussian_mask1 = create_gaussian_mask(X_source, Y_source, diameter=setup.gauss_width)
-print(x_source)
-print(setup.gauss_width)
-#grating_mask1 = create_slit_pattern_rand_smooth(X_source, Y_source, period=setup.stripe_period, angle=setup.angle ,smoothing_fraction=.1)
-object_mask1 = gaussian_mask1 #* grating_mask1
+# checking for sampling conditions and Fresnel number
+print("Checking for Fresnel number...")
+print(f"N_f = {setup.gauss_width**2/(setup.wavelength*setup.z_prop)}\n")
+
+print("Sampling conditions?")
+print(bool(2*np.abs(x_source[1]-x_source[0]) >= setup.wavelength*setup.z_prop/source_size))
+
+gaussian_mask1 = create_gaussian_mask(X_source, Y_source, w=setup.gauss_width)
+extent = [x_source[0], x_source[-1], y_source[0], y_source[-1]]
+grating_mask1 = create_slit_pattern_rand_smooth(X_source, Y_source, setup.stripe_period, angle=73)
+object_mask1 = gaussian_mask1 * grating_mask1
+
 print('Total photons at source: ', f'{setup.I0*np.sum(object_mask1):.2e}')
 print('Duration of Kalpha (tc=0.6 fs): ', setup.num_modes_per_shot*0.6, ' fs')
 #4500 represents the photon energy in eV considering the given wavelength; the electron charge is just a conversion factor (1eV = 1.6e-19J)
@@ -52,7 +64,7 @@ intensity_images, field_images = simulate_intensity_images(X_source, Y_source, s
                                                           setup.gauss_width, setup.stripe_period,
                                                           current_object_mask_func,
                                                           setup.num_pixels, dx_source, setup.angle, setup.wavelength,
-                                                          bin_factor, setup.gain, setup.QE, setup.ADC_bits)
+                                                          bin_factor, setup.gain, setup.QE, setup.ADC_bits, setup.padding_factor)
 
 # Compute g² and vertical lineout.
 avg_intensity, autocorr_avg, vertical_sum, I_per_pix = compute_g2(intensity_images)
@@ -66,20 +78,29 @@ plt.figure()
 plt.plot(autocorr_avg[int(len(autocorr_avg)/2)])
 plt.show()
 
+plt.figure()
+plt.imshow(autocorr_avg, cmap="rainbow")
+plt.colorbar()
+plt.show()
 
 plt.figure()
-extent = [0, setup.detector_pixel_size*(setup.num_pixels/bin_factor)*1e6, 0, setup.detector_pixel_size*(setup.num_pixels/bin_factor)*1e6]
-plt.imshow(autocorr_avg, origin='lower', cmap='inferno', norm=mcolors.LogNorm(), extent=extent)
+
+pad_width = setup.num_pixels * (setup.padding_factor-1)//2
+padded_E = np.pad(autocorr_avg, ((pad_width, pad_width), (pad_width, pad_width)), mode='constant', constant_values=(0+0j,0+0j))
+padded_N = padded_E.shape[0]
+
+extent = [-1/(2*dx_source), 1/(2*dx_source), -1/(2*dx_source), 1/(2*dx_source)]
+plt.imshow(np.abs(np.fft.fftshift(np.fft.fft2(padded_E)))-1, cmap='plasma', norm=mcolors.LogNorm(), extent=extent)
 plt.title("Ensemble-Averaged Intensity Autocorrelation (g² proxy) - Log Scale")
 plt.xlabel("x (µm)")
 plt.ylabel("y (µm)")
 plt.colorbar(label="Autocorrelation")
 plt.show()
 
-
 # Plot the vertical lineout.
 x_pixels = np.arange(len(vertical_sum))
 x_microns = x_pixels * setup.detector_pixel_size / bin_factor * 1e6  # Convert pixels to microns
+
 plt.figure(figsize=(6, 4))
 plt.plot(x_pixels, vertical_sum, 'b-', linewidth=2)
 plt.xlabel("pixels")
@@ -95,6 +116,18 @@ plt.xlabel("x (µm)")
 plt.ylabel("log(Summed g²)")
 plt.title("log abs Vertically Summed g² Function")
 plt.grid(True)
+plt.show()
+
+x_coords_um, lineout = compute_inclined_lineout(autocorr_avg, angle_deg=setup.angle, width=5)
+
+# Plot the lineout
+plt.figure(figsize=(8, 5))
+plt.plot(x_coords_um, lineout, label="Inclined Lineout (20º)")
+plt.xlabel("X Position (µm)")
+plt.ylabel("Summed Intensity")
+plt.title("Inclined Lineout Along Stripe Angle (20º)")
+plt.legend()
+plt.grid()
 plt.show()
 
 # Create a configuration dictionary.

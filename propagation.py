@@ -11,11 +11,9 @@ def combined_propagation(E, wavelength, z, dx, threshold=1.0, padding_factor=1):
     Fresnel_number = aperture_size**2 / (wavelength * z)
     
     if Fresnel_number < threshold:
-        print("Using Fraunhofer propagation.")
         E_out = fraunhofer_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_det, y_det
         return E_out
     else:
-        print("Using Fresnel propagation.")
         E_out = fresnel_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_out, y_out
         return E_out
     
@@ -40,6 +38,8 @@ def fraunhofer_propagation(E, wavelength, z, dx, padding_factor=1):
     input_spectrum = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(padded_E)))
 
     # Coordinates in the observation plane
+    x_det = fx * wavelength * z
+    y_det = x_det.copy()
     X_det = FX * wavelength * z
     Y_det = FY * wavelength * z
 
@@ -49,7 +49,7 @@ def fraunhofer_propagation(E, wavelength, z, dx, padding_factor=1):
     output_field = np.exp(1j * k * z) * np.exp(-1j * k / (2 * z) * (X_det**2 + Y_det**2)) * input_spectrum
     output_field = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(output_field)))
 
-    return output_field[pad_width:pad_width+N,pad_width:pad_width+N]
+    return output_field[pad_width:pad_width+N,pad_width:pad_width+N], x_det, y_det
 
 
 def fresnel_propagation(E, wavelength, z, dx, padding_factor=1):
@@ -67,6 +67,9 @@ def fresnel_propagation(E, wavelength, z, dx, padding_factor=1):
     fy = np.fft.fftshift(np.fft.fftfreq(padded_N, d=dx))
     FX, FY = np.meshgrid(fx, fy)
 
+    x_det = fx*wavelength*z
+    y_det = fy*wavelength*z
+
     k = 2 * np.pi / wavelength
 
     H = np.exp(-1j*k*z)*np.exp(-1j * np.pi * wavelength * z * (FX**2 + FY**2))
@@ -76,4 +79,4 @@ def fresnel_propagation(E, wavelength, z, dx, padding_factor=1):
     output_spectrum = input_spectrum * H
     output_field = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(output_spectrum)))
 
-    return output_field, pad_width, pad_width+N
+    return output_field[pad_width:pad_width+N, pad_width:pad_width+N]

@@ -15,7 +15,7 @@ from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 grid_dimension = 500
 grid_size = 100e-6
 
-gauss_width = 10e-6
+gauss_width = 5e-6
 
 wavelength = 2.75e-10
 z = 1
@@ -109,7 +109,7 @@ print(f"END: {np.sum(theoretical_prop)}")
 E_in = np.sqrt(I0)*np.ones((grid_dimension, grid_dimension), dtype=np.complex128)
 E_in *= create_gaussian_mask(X, Y, gauss_width)
 
-E_out = fraunhofer_propagation(E_in, wavelength, z, dx, padding_factor=2)
+E_out = fraunhofer_propagation(E_in, wavelength, z, dx, padding_factor=1)
 
 fig = plt.figure(figsize=(6,9))
 
@@ -460,13 +460,9 @@ def cosine_taper_2d_backup(x, y, gauss_width, Lx, gaussian):
 E_in = np.sqrt(I0)*np.ones((grid_dimension, grid_dimension), dtype=np.complex128)
 E_in *= create_gaussian_mask(X, Y, gauss_width)
 
-# mask = cosine_taper_2d_backup(x, y, gauss_width, grid_size, create_gaussian_mask(X, Y, gauss_width))
-# print(mask[int(len(mask)/2)])
-
-# E_in *= mask
 E_in *= np.exp(1j * random_phase)
 
-E_out = fraunhofer_propagation(E_in, wavelength, z, dx, padding_factor=2)
+E_out = fraunhofer_propagation(E_in, wavelength, z, dx, padding_factor=1)
 
 fig = plt.figure(figsize=(6,9))
 

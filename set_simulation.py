@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 import LightPipes as lp
 
 from focal_spot_pattern import create_gaussian_mask
-from propagation import combined_propagation as my_propagation
-from propagation_LP import combined_propagation
+from propagation import combined_propagation
 from detection import CCD_detection_binned
 
 from scipy.signal import fftconvolve
+from scipy.ndimage import map_coordinates
 
 # ----------------------------------------------------------------------------
 # Function 1: Simulation of intensity images (binned) for a multi-shot experiment
@@ -18,7 +18,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
                               gauss_width, stripe_period,
                               current_object_mask_func,
                               num_pixels, dx_source, angle, wavelength,
-                              bin_factor, gain, QE, ADC_bits):
+                              bin_factor, gain, QE, ADC_bits, padding_factor):
     """
     Simulate intensity images from a multi-shot experiment.
     
@@ -48,14 +48,17 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
     field_images = []
     
     # Create the Gaussian mask using the provided gauss_width.
-    gaussian_mask = create_gaussian_mask(X_source, Y_source, diameter=gauss_width)
+    gaussian_mask = create_gaussian_mask(X_source, Y_source, w=gauss_width)
     
     for shot in range(num_shots):
         # Generate a grating mask (one per shot) using the provided stripe_period.
-        # grating_mask = current_object_mask_func(X_source, Y_source, period=stripe_period, duty_cycle=0.7, angle=angle, smoothing_fraction=0.1, dx_source=dx_source)
+        grating_mask = current_object_mask_func(X_source, Y_source, stripe_period, angle=angle)
+        # plt.figure()
+        # plt.imshow(np.angle(grating_mask))
+        # plt.show()
 
         # Combine with the Gaussian mask to form the overall object mask.
-        current_object_mask = gaussian_mask #* grating_mask
+        current_object_mask = gaussian_mask * grating_mask
         
         # Compute intensity per mode.
         intensity_per_mode = I0 * np.ones((num_pixels, num_pixels)) / num_modes_per_shot
@@ -69,33 +72,42 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
             E_source = np.sqrt(intensity_per_mode) * np.exp(1j * random_phase)
             
             # Apply the object mask.
-            current_object_mask = create_gaussian_mask(X_source, Y_source, diameter=gauss_width)
             E_after_object = E_source * current_object_mask
-            plt.figure()
-            plt.imshow(np.abs(E_after_object)**2)
-            plt.title("gauss mask, random phase")
-            plt.show()
+
+            # plt.figure()
+            # plt.imshow(np.abs(E_after_object)**2, cmap="plasma")
+            # plt.title("gauss mask, random phase")
+            # plt.show()
+
             if shot == 0 and mode == 0:  # Plot only for the first shot and mode
                 # Plot amplitude and phase *after* the random phase is applied
                 intensity_to_plot = np.abs(E_after_object**2) * num_modes_per_shot
                 plt.figure(figsize=(8, 6))
-                plt.imshow(intensity_to_plot, cmap='inferno')
+                plt.imshow(intensity_to_plot, cmap='plasma')
                 plt.title(f"Total Source Intensity: {np.sum(intensity_to_plot):.2e} photons per pulse")
                 plt.colorbar()
                 plt.show()
             # Propagate the field.
-            E_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source)
+            E_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source, padding_factor=padding_factor)
             I_det = np.abs(E_det)**2
-            plt.figure()
-            plt.imshow(I_det, cmap="gist_heat")
-            plt.title("I_det")
-            plt.show()
+
+            if shot == 0:
+              plt.figure()
+              plt.imshow(I_det, cmap="plasma")
+              plt.title("I_det")
+              plt.colorbar()
+              plt.show()
+
             shot_intensity += I_det
         
         # Optionally store the last propagated field.
         field_images.append(E_det)
         # Apply CCD detection (including binning, Poisson noise, etc.)
         shot_intensity_binned = CCD_detection_binned(shot_intensity, bin_factor=bin_factor, gain=gain, QE=QE, ADC_bits=ADC_bits)
+        if shot == 0:
+            plt.figure()
+            plt.imshow(shot_intensity_binned, cmap="plasma")
+            plt.show()
         intensity_images.append(shot_intensity_binned)
         
         print(f"Completed Shot {shot+1}/{num_shots} - Photons per pixel: {np.sum(shot_intensity_binned)/((num_pixels/bin_factor)**2):.2f}")
@@ -121,13 +133,71 @@ def compute_g2(intensity_images):
     deltaI_images = [img - avg_intensity for img in intensity_images]
     N_bin = avg_intensity.shape[0]
     autocorr_sum = np.zeros((N_bin, N_bin))
-    for I in deltaI_images:
+    for I in intensity_images:
         autocorr = fftconvolve(I, I[::-1, ::-1], mode='same')
         autocorr_sum += autocorr
     autocorr_avg = autocorr_sum / num_shots
+    autocorr_avg /= np.mean(avg_intensity) ** 2
     I_per_pix = np.mean(avg_intensity)
     vertical_sum = np.sum(autocorr_avg, axis=0)
     return avg_intensity, autocorr_avg, vertical_sum, I_per_pix
+
+def compute_inclined_lineout(autocorr_avg, angle_deg=20, width=10):
+    """
+    Compute a lineout along an inclined direction at a given angle.
+    
+    Parameters:
+      autocorr_avg: 2D autocorrelation image.
+      angle_deg   : Angle of the stripes (in degrees, default 20º).
+      width       : Number of pixels to average over perpendicular to the line.
+    
+    Returns:
+      lineout_values: 1D array of extracted values along the inclined line.
+      x_coords_um: Corresponding x-coordinates in microns.
+    """
+
+    # Convert angle to radians
+    angle_rad = np.radians(angle_deg)
+
+    # Get image dimensions
+    Ny, Nx = autocorr_avg.shape
+
+    # Define center of image
+    center_x, center_y = Nx // 2, Ny // 2
+
+    # Define range of x-values (line will pass through center)
+    x_coords = np.arange(-Nx//2, Nx//2)  # Centered at 0
+    y_coords = np.tan(angle_rad) * x_coords  # 20º inclined line
+
+    # Convert to actual image indices
+    x_indices = np.round(x_coords + center_x).astype(int)
+    y_indices = np.round(y_coords + center_y).astype(int)
+
+    # Ensure indices are within bounds before modifying them
+    valid_mask = (x_indices >= 0) & (x_indices < Nx) & (y_indices >= 0) & (y_indices < Ny)
+
+    # Apply valid_mask BEFORE the loop
+    x_indices = x_indices[valid_mask]
+    y_indices = y_indices[valid_mask]
+    x_coords = x_coords[valid_mask]  # Keep only valid x-coordinates
+
+    # Extract values along the line using interpolation
+    lineout_values = map_coordinates(autocorr_avg, [y_indices, x_indices], order=1)
+
+    # Average over a band of width=10 pixels around the inclined line
+    summed_values = np.zeros_like(lineout_values)
+    for offset in range(-width//2, width//2):
+        y_offset = y_indices + offset
+        valid_offset_mask = (y_offset >= 0) & (y_offset < Ny)
+        summed_values[valid_offset_mask] += map_coordinates(
+            autocorr_avg, [y_offset[valid_offset_mask], x_indices[valid_offset_mask]], order=1
+        )
+
+    # Convert x-coordinates to microns using detector scale
+    detector_pixel_size_um = 13  # Each pixel is 13 µm
+    x_coords_um = x_coords * detector_pixel_size_um  # Now this matches the valid indices
+
+    return x_coords_um, summed_values
 
 # ----------------------------------------------------------------------------
 # Function 3: Save configuration and results

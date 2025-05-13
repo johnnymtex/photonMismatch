@@ -11,8 +11,11 @@ import matplotlib.gridspec as gridspec
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from mpl_toolkits.axes_grid1.inset_locator import mark_inset
 
+# %% [markdown]
+
+#### Initial simulation settings
+
 # %%
-# initial simulation settings
 grid_dimension = 500
 grid_size = 700e-6
 
@@ -33,20 +36,22 @@ X, Y = np.meshgrid(x,y)
 I0 = 1e6
 
 # %%
-# Fresnel and sampling conditions
-print("Fresnel check...")
+# checking for sampling conditions and Fresnel number
+print("Checking for Fresnel number...")
 print(f"N_f = {gauss_width**2/(wavelength*z)}\n")
 
-print("\nSampling conditions?")
-print(bool(x[1]-x[0] < wavelength*z/grid_size))
-
-print(f"\n{wavelength*z/(grid_dimension*(x[1]-x[0])**2)}")
+print("Sampling conditions?")
+print(bool(x[1]-x[0] >= wavelength*z/(2*grid_size)))
 
 # %%
 # Waist evolution function (just declaration)
 def w(w0, lambda_, z):
-    print("wz = ", w0 * np.sqrt(1 + (lambda_*z/(np.pi*w0*w0))**2))
     return w0 * np.sqrt(1 + (lambda_*z/(np.pi*w0*w0))**2)
+
+# %% [markdown]
+## Constant phase of 0 across the whole field
+### Intensity plots
+#### Theoretical solution
 
 # %%
 # Theoretical solutions for intensity
@@ -103,13 +108,15 @@ print("Tests for energy conservation...")
 print(f"START: {np.sum(theoretical_start)}")
 print(f"END: {np.sum(theoretical_prop)}")
 
+# %% [markdown]
+#### Custom solution
+
 # %%
-# My solution for intensity
+# Custom solution
 E_in = np.sqrt(I0)*np.ones((grid_dimension, grid_dimension), dtype=np.complex128)
 E_in *= create_gaussian_mask(X, Y, gauss_width)
 
-E_out, start, end = fresnel_propagation(E_in, wavelength, z, dx, padding_factor=2)
-E_out = E_out[start:end, start:end]
+E_out = fresnel_propagation(E_in, wavelength, z, dx, padding_factor=1)
 
 fig = plt.figure(figsize=(6,9))
 
@@ -164,6 +171,9 @@ print(f"START: {np.sum(np.abs(E_in)**2)}")
 print(f"END: {np.sum(np.abs(E_out)**2)}")
 
 E_out_copy = E_out.copy()
+
+# %% [markdown]
+#### LightPipes
 
 # %%
 # LightPipes solution for intensity
@@ -226,6 +236,11 @@ print(f"START: {np.sum(np.abs(LP_in.field)**2)}")
 print(f"END: {np.sum(np.abs(LP_out.field)**2)}")
 print(np.sum(np.abs(LP_out.field)**2)/np.sum(np.abs(LP_in.field)**2))
 
+# %% [markdown]
+### Phase plots
+
+#### Theoretical solution
+
 # %%
 # computing theoretical solutions (full field)
 theoretical_start_2 = np.sqrt(I0) * np.exp(-(X**2+Y**2)/(gauss_width*gauss_width))
@@ -242,7 +257,6 @@ def final_field(x, y, I0, w0, z, lambda_):
     zzR = zR(w0, lambda_)
     R = z * (1 + (zzR/z)**2)
     psi = np.atan2(z, zzR)
-    print(psi)
 
     return np.sqrt(I0) * w0/ww * np.exp(-(x**2+y**2)/(ww*ww)) * np.exp(-1j * (k*z + k*(x**2+y**2)/(2*R) - psi))
 
@@ -281,8 +295,11 @@ ax3.yaxis.major.formatter._useMathText = True
 
 plt.show()
 
+# %%  [markdown]
+#### Custom solution
+
 # %%
-# my method (phase)
+# custom method
 fig = plt.figure(figsize=(6,9))
 
 vmin = np.min([np.min(np.angle(E_in)), np.min(np.angle(E_out))])
@@ -317,6 +334,9 @@ ax3.yaxis.major.formatter._useMathText = True
 # ax3.axvline(x=gauss_width)
 
 plt.show()
+
+# %% [markdown]
+#### LightPipes
 
 # %%
 # LightPipes method (phase)
@@ -355,81 +375,32 @@ ax3.yaxis.major.formatter._useMathText = True
 
 plt.show()
 
-# %%
-# new functions
-def zR(w0, lambda_):
-    return np.pi*w0*w0/lambda_
+# %% [markdown]
 
-def w(w0, lambda_, z):
-    return w0 * np.sqrt(1 + (lambda_*z/(np.pi*w0*w0))**2)
-
-def final_field(x, y, I0, w0, z, lambda_, random_phase):
-    ww = w(w0, lambda_, z)
-    zzR = zR(w0, lambda_)
-    R = z * (1 + (zzR/z)**2)
-    psi = np.atan2(z, zzR)
-    print(psi)
-
-    return np.sqrt(I0) * w0/ww * np.exp(-(x**2+y**2)/(ww*ww)) * np.exp(-1j * (k*z + k*(x**2+y**2)/(2*R) - psi - random_phase))
+## Randomized phase
+### Intensity plots
 
 # %%
-# randomized phase
+# new functions and random phase assignment
 random_phase = np.random.uniform(-np.pi, np.pi, (grid_dimension, grid_dimension))
 
-# %%
-# theoretical solutions with random phase (intensity plots)
-theoretical_start = np.sqrt(I0) * np.exp(-(X**2+Y**2)/(gauss_width*gauss_width)) * np.exp(1j * random_phase)
-theoretical_prop = final_field(X, Y, I0, gauss_width, z, wavelength, random_phase)
+# def zR(w0, lambda_):
+#     return np.pi*w0*w0/lambda_
 
-fig = plt.figure(figsize=(6,9))
+# def w(w0, lambda_, z):
+#     return w0 * np.sqrt(1 + (lambda_*z/(np.pi*w0*w0))**2)
 
-vmin = np.min([np.min(np.abs(theoretical_start)**2), np.min(np.abs(theoretical_prop)**2)])
-vmax = np.max([np.max(np.abs(theoretical_start)**2), np.max(np.abs(theoretical_prop)**2)])
+# def final_field(x, y, I0, w0, z, lambda_, random_phase):
+#     ww = w(w0, lambda_, z)
+#     zzR = zR(w0, lambda_)
+#     R = z * (1 + (zzR/z)**2)
+#     psi = np.atan2(z, zzR)
+#     print(psi)
 
-gs = gridspec.GridSpec(3,2)
+#     return np.sqrt(I0) * w0/ww * np.exp(-(x**2+y**2)/(ww*ww)) * np.exp(-1j * (k*z + k*(x**2+y**2)/(2*R) - psi - random_phase))
 
-ax1 = fig.add_subplot(gs[0:2,0])
-im0 = ax1.imshow(np.abs(theoretical_start)**2, extent=(np.min(x)*1e6, np.max(x)*1e6, np.min(y)*1e6, np.max(y)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
-ax1.set_ylabel("y [$\mu$m]")
-ax1.set_xlabel("x [$\mu$m]")
-
-ax2 = fig.add_subplot(gs[0:2,1])
-im1 = ax2.imshow(np.abs(theoretical_prop)**2, extent=(np.min(x)*1e6, np.max(x)*1e6, np.min(y)*1e6, np.max(y)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
-ax2.set_xlabel("x [$\mu$m]")
-ax2.tick_params(labelleft=False)
-
-im0.set_clim(vmin, vmax)
-im1.set_clim(vmin, vmax)
-
-fig.subplots_adjust(hspace=-0.375, wspace=0.05)
-fig.colorbar(im0, ax=[ax1,ax2], location='top')
-
-ax3 = fig.add_subplot(gs[2,:])
-ax3.plot(x*1e6, np.abs(theoretical_start[int(len(theoretical_start)/2)])**2)
-ax3.plot(x*1e6, np.abs(theoretical_prop[int(len(theoretical_prop)/2)])**2, color="black", linestyle="dashed")
-ax3.set_xlabel("x [$\mu$m]")
-ax3.set_ylabel("Intensity")
-ax3.ticklabel_format(style="sci", axis='y', scilimits=(-3,2))
-ax3.yaxis.major.formatter._useMathText = True
-
-axins = inset_axes(ax3, width="35%", height="35%", loc='upper right', borderpad=1)
-axins.plot(x*1e6, np.abs(theoretical_start[int(len(theoretical_start)/2)])**2)
-axins.plot(x*1e6, np.abs(theoretical_prop[int(len(theoretical_prop)/2)])**2, '--', c="black")
-
-axins.tick_params(labelleft=False,labelbottom=False)
-
-# Set the x and y limits for the inset
-x1, x2, y1, y2 = -25, 25, 0.95e6, 1.02e6  # Customize this to zoom into the area of interest
-axins.set_xlim(x1, x2)
-axins.set_ylim(y1, y2)
-
-mark_inset(ax3, axins, loc1=3, loc2=1, fc="none", ec="0",zorder=10)
-
-plt.show()
-
-print("Tests for energy conservation...")
-print(f"START: {np.sum(np.abs(theoretical_start)**2)}")
-print(f"END: {np.sum(np.abs(theoretical_prop)**2)}")
+# %% [markdown]
+#### Custom solution
 
 # %%
 # custom code (intensity plots)
@@ -461,13 +432,11 @@ E_in = np.sqrt(I0)*np.ones((grid_dimension, grid_dimension), dtype=np.complex128
 E_in *= create_gaussian_mask(X, Y, gauss_width)
 
 mask = cosine_taper_2d_backup(x, y, gauss_width, grid_size, create_gaussian_mask(X, Y, gauss_width))
-print(mask[int(len(mask)/2)])
 
 E_in *= mask
 E_in *= np.exp(1j * random_phase)
 
-E_out, start, end = fresnel_propagation(E_in, wavelength, z, dx, padding_factor=2)
-E_out = E_out[start:end, start:end]
+E_out = fresnel_propagation(E_in, wavelength, z, dx, padding_factor=1)
 
 fig = plt.figure(figsize=(6,9))
 
@@ -514,6 +483,10 @@ E_out_copy = E_out.copy()
 # plt.figure()
 # plt.plot(np.abs(E_in[int(len(E_in)/2)])**2)
 # plt.ylim(0,0.3)
+
+# %% [markdown]
+#### LightPipes
+
 # %%
 # LightPipes method (intensity plots)
 
@@ -564,41 +537,9 @@ print(f"START: {np.sum(np.abs(LP_in.field)**2)}")
 print(f"END: {np.sum(np.abs(LP_out.field)**2)}")
 print(np.sum(np.abs(LP_out.field)**2)/np.sum(np.abs(LP_in.field)**2))
 
-# %%
-# theoretical solutions with random phase (phase plots)
-
-fig = plt.figure(figsize=(6,9))
-
-vmin = np.min([np.min(np.angle(theoretical_start)), np.min(np.angle(theoretical_prop))])
-vmax = np.max([np.max(np.angle(theoretical_start)), np.max(np.angle(theoretical_prop))])
-
-gs = gridspec.GridSpec(3,2)
-
-ax1 = fig.add_subplot(gs[0:2,0])
-im0 = ax1.imshow(np.angle(theoretical_start), extent=(np.min(x)*1e6, np.max(x)*1e6, np.min(y)*1e6, np.max(y)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
-ax1.set_ylabel("y [$\mu$m]")
-ax1.set_xlabel("x [$\mu$m]")
-
-ax2 = fig.add_subplot(gs[0:2,1])
-im1 = ax2.imshow(np.angle(theoretical_prop), extent=(np.min(x)*1e6, np.max(x)*1e6, np.min(y)*1e6, np.max(y)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
-ax2.set_xlabel("x [$\mu$m]")
-ax2.tick_params(labelleft=False)
-
-im0.set_clim(vmin, vmax)
-im1.set_clim(vmin, vmax)
-
-fig.subplots_adjust(hspace=-0.375, wspace=0.05)
-fig.colorbar(im0, ax=[ax1,ax2], location='top')
-
-ax3 = fig.add_subplot(gs[2,:])
-ax3.plot(x*1e6, np.angle(theoretical_start[int(len(theoretical_start)/2)]))
-ax3.plot(x*1e6, np.angle(theoretical_prop[int(len(theoretical_prop)/2)]), color="black", linestyle="dashed")
-ax3.set_xlabel("x [$\mu$m]")
-ax3.set_ylabel("Phase [rad]")
-ax3.ticklabel_format(style="sci", axis='y', scilimits=(-3,2))
-ax3.yaxis.major.formatter._useMathText = True
-
-plt.show()
+# %% [markdown]
+### Phase plots
+#### Custom code
 
 # %%
 # custom code (phase plots)
@@ -638,8 +579,254 @@ ax3.yaxis.major.formatter._useMathText = True
 
 plt.show()
 
+# %% [markdown]
+#### LightPipes
+
 # %%
 # LightPipes method (phase plots)
+
+fig = plt.figure(figsize=(6,9))
+
+vmin = np.min([np.min(np.angle(LP_in.field)), np.min(np.angle(LP_out.field))])
+vmax = np.max([np.max(np.angle(LP_in.field)), np.max(np.angle(LP_out.field))])
+
+gs = gridspec.GridSpec(3,2)
+
+ax1 = fig.add_subplot(gs[0:2,0])
+im0 = ax1.imshow(np.angle(LP_in.field), extent=(np.min(LP_in.xvalues)*1e6, np.max(LP_in.xvalues)*1e6, np.min(LP_in.xvalues)*1e6, np.max(LP_in.xvalues)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
+ax1.set_ylabel("y [$\mu$m]")
+ax1.set_xlabel("x [$\mu$m]")
+
+ax2 = fig.add_subplot(gs[0:2,1])
+im1 = ax2.imshow(np.angle(LP_out.field), extent=(np.min(LP_in.xvalues)*1e6, np.max(LP_in.xvalues)*1e6, np.min(LP_in.xvalues)*1e6, np.max(LP_in.xvalues)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
+ax2.set_xlabel("x [$\mu$m]")
+ax2.tick_params(labelleft=False)
+
+im0.set_clim(vmin, vmax)
+im1.set_clim(vmin, vmax)
+
+fig.subplots_adjust(hspace=-0.375, wspace=0.05)
+fig.colorbar(im0, ax=[ax1,ax2], location='top')
+
+ax3 = fig.add_subplot(gs[2,:])
+ax3.plot(LP_in.xvalues*1e6, np.angle(LP_in.field[int(len(LP_in.field)/2)]))
+ax3.plot(LP_in.xvalues*1e6, np.angle(LP_out.field[int(len(LP_out.field)/2)]), color="black", linestyle="dashed")
+ax3.set_xlabel("x [$\mu$m]")
+ax3.set_ylabel("Intensity")
+ax3.ticklabel_format(style="sci", axis='y', scilimits=(-3,2))
+ax3.yaxis.major.formatter._useMathText = True
+# ax3.axhline(y=1/(np.exp(1))*I0)
+# ax3.axvline(x=gauss_width)
+
+plt.show()
+
+# %% [markdown]
+## Phase modulation
+### Intensity plots
+#### Custom code
+
+# %%
+# custom code for intensity
+def multiply_specific_entries(X, Y, period=1e-6, duty_cycle=0.5, angle=0):
+    """
+    Create a binary slit pattern with a given period, duty cycle, and rotation angle.
+    """
+    xp = X * np.cos(angle) + Y * np.sin(angle)
+    mod_val = np.mod(xp, period)
+    pattern = np.where(mod_val < duty_cycle * period, np.exp(1j*np.pi), 1)
+    return pattern
+
+E_in = np.sqrt(I0)*np.ones((grid_dimension, grid_dimension), dtype=np.complex128)
+E_in *= create_gaussian_mask(X, Y, gauss_width)
+
+mask = multiply_specific_entries(X, Y, period=dx*10, angle=np.pi/4)
+print(mask)
+plt.figure()
+plt.imshow(np.angle(mask))
+E_in *= mask
+
+E_out = fresnel_propagation(E_in, wavelength, z, dx, padding_factor=1)
+
+fig = plt.figure(figsize=(6,9))
+
+vmin = np.min([np.min(np.abs(E_in)**2), np.min(np.abs(E_out)**2)])
+vmax = np.max([np.max(np.abs(E_in)**2), np.max(np.abs(E_out)**2)])
+
+gs = gridspec.GridSpec(3,2)
+
+ax1 = fig.add_subplot(gs[0:2,0])
+im0 = ax1.imshow(np.abs(E_in)**2, extent=(np.min(x)*1e6, np.max(x)*1e6, np.min(y)*1e6, np.max(y)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
+ax1.set_ylabel("y [$\mu$m]")
+ax1.set_xlabel("x [$\mu$m]")
+
+ax2 = fig.add_subplot(gs[0:2,1])
+im1 = ax2.imshow(np.abs(E_out)**2, extent=(np.min(x)*1e6, np.max(x)*1e6, np.min(y)*1e6, np.max(y)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
+ax2.set_xlabel("x [$\mu$m]")
+ax2.tick_params(labelleft=False)
+
+im0.set_clim(vmin, vmax)
+im1.set_clim(vmin, vmax)
+
+fig.subplots_adjust(hspace=-0.375, wspace=0.05)
+fig.colorbar(im0, ax=[ax1,ax2], location='top')
+
+ax3 = fig.add_subplot(gs[2,:])
+ax3.plot(x*1e6, np.abs(E_in[int(len(E_in)/2)])**2)
+ax3.plot(x*1e6, np.abs(E_out[int(len(E_out)/2)])**2, color="black", linestyle="dashed")
+ax3.set_xlabel("x [$\mu$m]")
+ax3.set_ylabel("Intensity")
+ax3.ticklabel_format(style="sci", axis='y', scilimits=(-3,2))
+ax3.yaxis.major.formatter._useMathText = True
+# ax3.axhline(y=1/(np.exp(1)**2)*I0)
+# ax3.axvline(x=gauss_width)
+
+axins = inset_axes(ax3, width="35%", height="35%", loc='upper right', borderpad=1)
+axins.plot(x*1e6, np.abs(E_in[int(len(E_in)/2)])**2)
+axins.plot(x*1e6, np.abs(E_out[int(len(E_out)/2)])**2, '--', c="black")
+
+axins.tick_params(labelleft=False,labelbottom=False)
+
+# Set the x and y limits for the inset
+x1, x2, y1, y2 = -25, 25, 0.95e6, 1.02e6  # Customize this to zoom into the area of interest
+axins.set_xlim(x1, x2)
+axins.set_ylim(y1, y2)
+
+mark_inset(ax3, axins, loc1=3, loc2=1, fc="none", ec="0",zorder=10)
+
+plt.show()
+
+print("Tests for energy conservation...")
+print(f"START: {np.sum(np.abs(E_in)**2)}")
+print(f"END: {np.sum(np.abs(E_out)**2)}")
+
+E_out_copy = E_out.copy()
+
+# %% [markdown]
+
+#### LightPipes
+
+# %%
+# LightPipes solution for intensity
+LP_in = lp.Begin(grid_size, wavelength, grid_dimension, dtype=np.complex128)
+LP_in.field *= np.sqrt(I0) * mask
+LP_in = lp.GaussAperture(LP_in, 1/np.sqrt(2)*gauss_width)
+
+LP_out = lp.Forvard(LP_in, z)
+
+fig = plt.figure(figsize=(6,9))
+
+vmin = np.min([np.min(np.abs(LP_in.field)**2), np.min(np.abs(LP_out.field)**2)])
+vmax = np.max([np.max(np.abs(LP_in.field)**2), np.max(np.abs(LP_out.field)**2)])
+
+gs = gridspec.GridSpec(3,2)
+
+ax1 = fig.add_subplot(gs[0:2,0])
+im0 = ax1.imshow(np.abs(LP_in.field)**2, extent=(np.min(LP_in.xvalues)*1e6, np.max(LP_in.xvalues)*1e6, np.min(LP_in.xvalues)*1e6, np.max(LP_in.xvalues)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
+ax1.set_ylabel("y [$\mu$m]")
+ax1.set_xlabel("x [$\mu$m]")
+
+ax2 = fig.add_subplot(gs[0:2,1])
+im1 = ax2.imshow(np.abs(LP_out.field)**2, extent=(np.min(LP_in.xvalues)*1e6, np.max(LP_in.xvalues)*1e6, np.min(LP_in.xvalues)*1e6, np.max(LP_in.xvalues)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
+ax2.set_xlabel("x [$\mu$m]")
+ax2.tick_params(labelleft=False)
+
+im0.set_clim(vmin, vmax)
+im1.set_clim(vmin, vmax)
+
+fig.subplots_adjust(hspace=-0.375, wspace=0.05)
+fig.colorbar(im0, ax=[ax1,ax2], location='top')
+
+ax3 = fig.add_subplot(gs[2,:])
+ax3.plot(LP_in.xvalues*1e6, np.abs(LP_in.field[int(len(LP_in.field)/2)])**2)
+ax3.plot(LP_in.xvalues*1e6, np.abs(LP_out.field[int(len(LP_out.field)/2)])**2, color="black", linestyle="dashed")
+ax3.set_xlabel("x [$\mu$m]")
+ax3.set_ylabel("Intensity")
+ax3.ticklabel_format(style="sci", axis='y', scilimits=(-3,2))
+ax3.yaxis.major.formatter._useMathText = True
+# ax3.axhline(y=1/(np.exp(1)**2)*I0)
+# ax3.axvline(x=gauss_width)
+
+axins = inset_axes(ax3, width="35%", height="35%", loc='upper right', borderpad=1)
+axins.plot(LP_in.xvalues*1e6, np.abs(LP_in.field[int(len(LP_in.field)/2)])**2)
+axins.plot(LP_in.xvalues*1e6, np.abs(LP_out.field[int(len(LP_out.field)/2)])**2, '--', c="black")
+
+axins.tick_params(labelleft=False,labelbottom=False)
+
+# Set the x and y limits for the inset
+x1, x2, y1, y2 = -25, 25, 0.95e6, 1.02e6  # Customize this to zoom into the area of interest
+axins.set_xlim(x1, x2)
+axins.set_ylim(y1, y2)
+
+mark_inset(ax3, axins, loc1=3, loc2=1, fc="none", ec="0",zorder=10)
+
+plt.show()
+
+print("Tests for energy conservation...")
+print(f"START: {np.sum(np.abs(LP_in.field)**2)}")
+print(f"END: {np.sum(np.abs(LP_out.field)**2)}")
+print(np.sum(np.abs(LP_out.field)**2)/np.sum(np.abs(LP_in.field)**2))
+
+# %% [markdown]
+### Phase plots
+#### Custom code
+
+# %%
+# custom code
+E_in = np.sqrt(I0)*np.ones((grid_dimension, grid_dimension), dtype=np.complex128)
+E_in *= create_gaussian_mask(X, Y, gauss_width)
+
+E_in *= mask
+
+E_out = fresnel_propagation(E_in, wavelength, z, dx, padding_factor=1)
+
+fig = plt.figure(figsize=(6,9))
+
+vmin = np.min([np.min(np.angle(E_in)), np.min(np.angle(E_out))])
+vmax = np.max([np.max(np.angle(E_in)), np.max(np.angle(E_out))])
+
+gs = gridspec.GridSpec(3,2)
+
+ax1 = fig.add_subplot(gs[0:2,0])
+im0 = ax1.imshow(np.angle(E_in), extent=(np.min(x)*1e6, np.max(x)*1e6, np.min(y)*1e6, np.max(y)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
+ax1.set_ylabel("y [$\mu$m]")
+ax1.set_xlabel("x [$\mu$m]")
+
+ax2 = fig.add_subplot(gs[0:2,1])
+im1 = ax2.imshow(np.angle(E_out), extent=(np.min(x)*1e6, np.max(x)*1e6, np.min(y)*1e6, np.max(y)*1e6), cmap="Greys_r", vmin=vmin, vmax=vmax)
+ax2.set_xlabel("x [$\mu$m]")
+ax2.tick_params(labelleft=False)
+
+im0.set_clim(vmin, vmax)
+im1.set_clim(vmin, vmax)
+
+fig.subplots_adjust(hspace=-0.375, wspace=0.05)
+fig.colorbar(im0, ax=[ax1,ax2], location='top')
+
+ax3 = fig.add_subplot(gs[2,:])
+ax3.plot(x*1e6, np.angle(E_in[int(len(E_in)/2)]))
+ax3.plot(x*1e6, np.angle(E_out[int(len(E_out)/2)]), color="black", linestyle="dashed")
+ax3.set_xlabel("x [$\mu$m]")
+ax3.set_ylabel("Intensity")
+ax3.ticklabel_format(style="sci", axis='y', scilimits=(-3,2))
+ax3.yaxis.major.formatter._useMathText = True
+# ax3.axhline(y=1/(np.exp(1))*I0)
+# ax3.axvline(x=gauss_width)
+
+plt.show()
+
+E_out_copy = E_out.copy()
+
+# %% [markdown]
+
+#### LightPipes
+
+# %%
+# LightPipes solution for intensity
+LP_in = lp.Begin(grid_size, wavelength, grid_dimension, dtype=np.complex128)
+LP_in.field *= np.sqrt(I0) * mask
+LP_in = lp.GaussAperture(LP_in, 1/np.sqrt(2)*gauss_width)
+
+LP_out = lp.Forvard(LP_in, z)
 
 fig = plt.figure(figsize=(6,9))
 

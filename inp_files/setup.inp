@@ -1,15 +1,16 @@
 # Simulation parameters:
-num_shots = 200
+num_shots = 20
 num_modes_per_shot = 1
-I0 = 1e6
-z_prop = 1
-wavelength = 2.75e-10
-angle = 20
-num_pixels = 500
+I0 = 1
+z_prop = 0.275
+wavelength = 1.38e-10
+angle = 73
+num_pixels = 750
 
 #spot parameters
-gauss_width = 15e-6
-stripe_period = 1e-6
+gauss_width = 148.66e-6
+stripe_period = 20e-6
+grid_size = 1000e-6
 
 # Detector parameters:
 detector_pixel_size = 13e-6
@@ -17,3 +18,5 @@ detector_pixel_size = 13e-6
 gain = 1
 QE = 0.8
 ADC_bits = 18
+
+padding_factor = 2

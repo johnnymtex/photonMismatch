@@ -55,8 +55,7 @@ def create_slit_pattern_rand(X, Y, period=0.5e-6, duty_cycle=0.5, angle=0):
     
     return pattern
 
-
-def create_slit_pattern_rand_smooth(X, Y, period=4e-6, duty_cycle=0.3, angle=0, smoothing_fraction=0.1, dx_source=1e-6):
+def create_slit_pattern_rand_smooth(X, Y, period=4e-6, duty_cycle=0.7, angle=0, smoothing_fraction=0.1, dx_source=1e-6):
     """
     Create a slit pattern with soft edges using a Gaussian blur, where the blur width is a fraction of the period.
 
