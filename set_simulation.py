@@ -133,11 +133,11 @@ def compute_g2(intensity_images):
     deltaI_images = [img - avg_intensity for img in intensity_images]
     N_bin = avg_intensity.shape[0]
     autocorr_sum = np.zeros((N_bin, N_bin))
-    for I in intensity_images:
+    for I in deltaI_images:
         autocorr = fftconvolve(I, I[::-1, ::-1], mode='same')
+        #autocorr /= np.mean(I)**2
         autocorr_sum += autocorr
     autocorr_avg = autocorr_sum / num_shots
-    autocorr_avg /= np.mean(avg_intensity) ** 2
     I_per_pix = np.mean(avg_intensity)
     vertical_sum = np.sum(autocorr_avg, axis=0)
     return avg_intensity, autocorr_avg, vertical_sum, I_per_pix

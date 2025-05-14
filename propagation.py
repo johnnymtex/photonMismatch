@@ -38,16 +38,23 @@ def fraunhofer_propagation(E, wavelength, z, dx, padding_factor=1):
     input_spectrum = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(padded_E)))
 
     # Coordinates in the observation plane
-    x_det = fx * wavelength * z
+    print(len(np.fft.fftfreq(N, d=dx)))
+    x_det = np.fft.fftshift(np.fft.fftfreq(N, d=dx)) * wavelength * z
     y_det = x_det.copy()
-    X_det = FX * wavelength * z
-    Y_det = FY * wavelength * z
 
     k = 2 * np.pi / wavelength
 
     # Calculate the output field using the Fraunhofer approximation
-    output_field = np.exp(1j * k * z) * np.exp(-1j * k / (2 * z) * (X_det**2 + Y_det**2)) * input_spectrum
+    output_field = np.exp(1j * k * z) * np.exp(-1j * k / (2 * z) * (FX**2 + FY**2)) * input_spectrum
     output_field = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(output_field)))
+
+    plt.figure()
+    plt.imshow(np.abs(output_field))
+    plt.show()
+
+    plt.figure()
+    plt.imshow(np.abs(output_field[pad_width:pad_width+N, pad_width:pad_width+N]))
+    plt.show()
 
     return output_field[pad_width:pad_width+N,pad_width:pad_width+N], x_det, y_det
 

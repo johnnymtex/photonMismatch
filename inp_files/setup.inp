@@ -9,7 +9,7 @@ num_pixels = 750
 
 #spot parameters
 gauss_width = 148.66e-6
-stripe_period = 20e-6
+stripe_period = 80e-6
 grid_size = 1000e-6
 
 # Detector parameters:
