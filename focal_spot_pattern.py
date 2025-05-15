@@ -28,7 +28,7 @@ def create_slit_pattern(X, Y, period=1e-6, duty_cycle=0.5, angle=0):
     pattern = np.where(mod_val < duty_cycle * period, 1, 0)
     return pattern
 
-def create_slit_pattern_rand(X, Y, period=0.5e-6, duty_cycle=0.5, angle=0):
+def create_slit_pattern_rand(X, Y, period=0.5e-6, duty_cycle=0.7, angle=0):
     """
     Create a binary slit pattern with a given period, duty cycle, and rotation angle.
     Introduces a random phase shift between 0 and 1 period to simulate sampling different parts of the periodic pattern.
@@ -51,11 +51,11 @@ def create_slit_pattern_rand(X, Y, period=0.5e-6, duty_cycle=0.5, angle=0):
     
     # Create the slit pattern with the randomly shifted coordinate
     mod_val = np.mod(xp_shifted, period)
-    pattern = np.where(mod_val < duty_cycle * period, 1, 0)
+    pattern = np.where(mod_val < duty_cycle * period, -1,1)
     
     return pattern
 
-def create_slit_pattern_rand_smooth(X, Y, period=4e-6, duty_cycle=0.7, angle=0, smoothing_fraction=0.1, dx_source=1e-6):
+def create_slit_pattern_rand_smooth(X, Y, period=4e-6, duty_cycle=0.5, angle=0, smoothing_fraction=0.1, dx_source=1e-6):
     """
     Create a slit pattern with soft edges using a Gaussian blur, where the blur width is a fraction of the period.
 
@@ -81,7 +81,7 @@ def create_slit_pattern_rand_smooth(X, Y, period=4e-6, duty_cycle=0.7, angle=0, 
     
     # Create binary slit pattern
     mod_val = np.mod(xp_shifted, period)
-    pattern_hard = np.where(mod_val < duty_cycle * period, 1, 0)
+    pattern_hard = np.where(mod_val < duty_cycle * period, -1, 1)
     
     # Define blur width as a fraction of the period
     blur_width = smoothing_fraction * period  # Defines blur in meters

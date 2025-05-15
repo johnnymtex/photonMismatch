@@ -79,7 +79,10 @@ plt.plot(autocorr_avg[int(len(autocorr_avg)/2)])
 plt.show()
 
 plt.figure()
-plt.imshow(autocorr_avg, cmap="rainbow")
+plt.imshow(np.log10(np.abs(autocorr_avg - 1) + 1e-6), cmap="rainbow")
+plt.title("Autocorrelation (g² proxy) - Log Scale")
+plt.xlabel("x (pixels)")
+plt.ylabel("y (pixels)")
 plt.colorbar()
 plt.show()
 
@@ -90,7 +93,7 @@ padded_E = np.pad(autocorr_avg, ((pad_width, pad_width), (pad_width, pad_width))
 padded_N = padded_E.shape[0]
 
 extent = [-1/(2*dx_source), 1/(2*dx_source), -1/(2*dx_source), 1/(2*dx_source)]
-plt.imshow(np.abs(np.fft.fftshift(np.fft.fft2(padded_E)))-1, cmap='plasma', norm=mcolors.LogNorm(), extent=extent)
+plt.imshow(np.abs(np.fft.fftshift(np.fft.fft2(padded_E)))-1, cmap='plasma', extent=extent)
 plt.title("Ensemble-Averaged Intensity Autocorrelation (g² proxy) - Log Scale")
 plt.xlabel("x (µm)")
 plt.ylabel("y (µm)")

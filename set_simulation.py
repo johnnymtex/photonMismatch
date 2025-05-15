@@ -53,9 +53,6 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
     for shot in range(num_shots):
         # Generate a grating mask (one per shot) using the provided stripe_period.
         grating_mask = current_object_mask_func(X_source, Y_source, stripe_period, angle=angle)
-        # plt.figure()
-        # plt.imshow(np.angle(grating_mask))
-        # plt.show()
 
         # Combine with the Gaussian mask to form the overall object mask.
         current_object_mask = gaussian_mask * grating_mask
@@ -64,20 +61,15 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
         intensity_per_mode = I0 * np.ones((num_pixels, num_pixels)) / num_modes_per_shot
         
         # Initialize accumulator for shot's full-resolution intensity.
-        shot_intensity = np.zeros((num_pixels, num_pixels))
+        shot_intensity = np.zeros((2*num_pixels, 2*num_pixels))
 
         for mode in range(num_modes_per_shot):
             # Generate a new random phase pattern.
-            random_phase = np.random.uniform(0, 2*np.pi, (num_pixels, num_pixels))
-            E_source = np.sqrt(intensity_per_mode) * np.exp(1j * random_phase)
+            #random_phase = np.random.uniform(0, 2*np.pi, (num_pixels, num_pixels))
+            E_source = np.sqrt(intensity_per_mode)# * np.exp(1j * random_phase)
             
             # Apply the object mask.
             E_after_object = E_source * current_object_mask
-
-            # plt.figure()
-            # plt.imshow(np.abs(E_after_object)**2, cmap="plasma")
-            # plt.title("gauss mask, random phase")
-            # plt.show()
 
             if shot == 0 and mode == 0:  # Plot only for the first shot and mode
                 # Plot amplitude and phase *after* the random phase is applied
@@ -87,6 +79,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
                 plt.title(f"Total Source Intensity: {np.sum(intensity_to_plot):.2e} photons per pulse")
                 plt.colorbar()
                 plt.show()
+
             # Propagate the field.
             E_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source, padding_factor=padding_factor)
             I_det = np.abs(E_det)**2
@@ -102,14 +95,16 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
         
         # Optionally store the last propagated field.
         field_images.append(E_det)
+
         # Apply CCD detection (including binning, Poisson noise, etc.)
         shot_intensity_binned = CCD_detection_binned(shot_intensity, bin_factor=bin_factor, gain=gain, QE=QE, ADC_bits=ADC_bits)
+
         if shot == 0:
             plt.figure()
             plt.imshow(shot_intensity_binned, cmap="plasma")
             plt.show()
+
         intensity_images.append(shot_intensity_binned)
-        
         print(f"Completed Shot {shot+1}/{num_shots} - Photons per pixel: {np.sum(shot_intensity_binned)/((num_pixels/bin_factor)**2):.2f}")
     
     return intensity_images, field_images
@@ -133,9 +128,9 @@ def compute_g2(intensity_images):
     deltaI_images = [img - avg_intensity for img in intensity_images]
     N_bin = avg_intensity.shape[0]
     autocorr_sum = np.zeros((N_bin, N_bin))
-    for I in deltaI_images:
+    for I in intensity_images:
         autocorr = fftconvolve(I, I[::-1, ::-1], mode='same')
-        #autocorr /= np.mean(I)**2
+        autocorr /= np.mean(I)**2
         autocorr_sum += autocorr
     autocorr_avg = autocorr_sum / num_shots
     I_per_pix = np.mean(avg_intensity)
