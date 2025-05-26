@@ -1,7 +1,7 @@
 # Simulation parameters:
-num_shots = 10
+num_shots = 100
 num_modes_per_shot = 1
-I0 = 1
+I0 = 1e3
 z_prop = 0.275
 wavelength = 1.38e-10
 angle = 73
