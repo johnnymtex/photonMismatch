@@ -16,7 +16,7 @@ def create_gaussian_mask(X, Y, w=20e-6):
     The amplitude falls to 1/e at a radius of (diameter/2).
     """
 
-    mask = np.sqrt(np.exp(- 2*(X**2 + Y**2) / (w*w)))
+    mask = np.exp(-(X**2 + Y**2) / (w*w))
     return mask
 
 def create_slit_pattern(X, Y, period=1e-6, duty_cycle=0.5, angle=0):
@@ -81,7 +81,7 @@ def create_slit_pattern_rand_smooth(X, Y, period=4e-6, duty_cycle=0.5, angle=0, 
     
     # Create binary slit pattern
     mod_val = np.mod(xp_shifted, period)
-    pattern_hard = np.where(mod_val < duty_cycle * period, -1, 1)
+    pattern_hard = np.where(mod_val < duty_cycle * period, 0, 1)
     
     # Define blur width as a fraction of the period
     blur_width = smoothing_fraction * period  # Defines blur in meters
@@ -90,7 +90,7 @@ def create_slit_pattern_rand_smooth(X, Y, period=4e-6, duty_cycle=0.5, angle=0, 
     blur_sigma = blur_width / dx_source  # Converts to pixels
     
     # Apply Gaussian blur for smooth edges
-    pattern_smooth = gaussian_filter(pattern_hard.astype(float), sigma=blur_sigma)
+    pattern_smooth = gaussian_filter(pattern_hard.astype(np.complex128), sigma=blur_sigma)
     pattern_smooth = np.clip(pattern_smooth, 0, 1)  # Clip values to [0, 1] to avoid numerical phase shifts
     
     return pattern_smooth

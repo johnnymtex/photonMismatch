@@ -15,31 +15,8 @@ def combined_propagation(E, wavelength, z, dx, threshold=1.0, padding_factor=1):
         return E_out
     else:
         E_out = fresnel_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_out, y_out
-        return E_out
+        return E_out, x_det, y_det
     
-
-# def fraunhofer_propagation_new(E, wavelength, z, dx):
-#     """
-#     Propagate an input field E using the Fraunhofer approximation with zero-padding.
-#     """
-#     N = E.shape[0]
-
-#     fx = np.fft.fftshift(np.fft.fftfreq(N, d=dx))
-#     fy = np.fft.fftshift(np.fft.fftfreq(N, d=dx))
-#     FX, FY = np.meshgrid(fx, fy)
-
-#     # Fourier transform of the padded input field
-#     input_spectrum = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(E), norm='ortho'))
-
-#     k = 2 * np.pi / wavelength
-
-#     # Calculate the output field using the Fraunhofer approximation
-#     output_field = np.exp(1j * k * z)/(1j*wavelength*z) * np.exp(1j * wavelength * z * np.pi * (FX**2 + FY**2)) * input_spectrum
-    
-#     x_det = wavelength*z*fx
-#     y_det = x_det
-
-#     return output_field, x_det, y_det
     
 def fraunhofer_propagation(E, wavelength, z, dx, padding_factor=1):
     """
@@ -57,6 +34,9 @@ def fraunhofer_propagation(E, wavelength, z, dx, padding_factor=1):
     fy = np.fft.fftshift(np.fft.fftfreq(padded_N, d=dx))
     FX, FY = np.meshgrid(fx, fy)
 
+    X_det = FX*wavelength*z
+    Y_det = FY*wavelength*z
+
     # Fourier transform of the padded input field
     input_spectrum = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(padded_E)))
 
@@ -68,10 +48,10 @@ def fraunhofer_propagation(E, wavelength, z, dx, padding_factor=1):
     k = 2 * np.pi / wavelength
 
     # Calculate the output field using the Fraunhofer approximation
-    output_field = np.exp(1j * k * z) * np.exp(-1j * k / (2 * z) * (FX**2 + FY**2)) * input_spectrum
+    output_field = np.exp(1j * k * z) * np.exp(-1j * k / (2 * z) * (X_det**2 + Y_det**2)) * input_spectrum
     output_field = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(output_field)))
 
-    return output_field[pad_width:pad_width+N,pad_width:pad_width+N], x_det, y_det
+    return output_field[pad_width:pad_width+N, pad_width:pad_width+N]
 
 def fresnel_propagation(E, wavelength, z, dx, padding_factor=1):
     """
@@ -88,9 +68,6 @@ def fresnel_propagation(E, wavelength, z, dx, padding_factor=1):
     fy = np.fft.fftshift(np.fft.fftfreq(padded_N, d=dx))
     FX, FY = np.meshgrid(fx, fy)
 
-    x_det = fx*wavelength*z
-    y_det = fy*wavelength*z
-
     k = 2 * np.pi / wavelength
 
     H = np.exp(-1j*k*z)*np.exp(-1j * np.pi * wavelength * z * (FX**2 + FY**2))
@@ -98,6 +75,10 @@ def fresnel_propagation(E, wavelength, z, dx, padding_factor=1):
     input_spectrum = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(padded_E)))
 
     output_spectrum = input_spectrum * H
+
+    x_det = fx * wavelength * z
+    y_det = fy * wavelength * z
+
     output_field = np.fft.fftshift(np.fft.ifft2(np.fft.ifftshift(output_spectrum)))
 
-    return output_field
+    return output_spectrum, x_det, y_det

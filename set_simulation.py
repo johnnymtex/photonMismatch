@@ -7,7 +7,7 @@ from focal_spot_pattern import create_gaussian_mask
 from propagation import combined_propagation
 from detection import CCD_detection_binned
 
-from scipy.signal import fftconvolve
+from scipy.signal import fftconvolve, correlate2d
 from scipy.ndimage import map_coordinates
 
 # ----------------------------------------------------------------------------
@@ -18,7 +18,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
                               gauss_width, stripe_period,
                               current_object_mask_func,
                               num_pixels, dx_source, angle, wavelength,
-                              bin_factor, gain, QE, ADC_bits, padding_factor):
+                              bin_factor, gain, QE, ADC_bits, padding_factor, incoherent=False):
     """
     Simulate intensity images from a multi-shot experiment.
     
@@ -52,7 +52,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
     
     for shot in range(num_shots):
         # Generate a grating mask (one per shot) using the provided stripe_period.
-        grating_mask = current_object_mask_func(X_source, Y_source, stripe_period, angle=angle)
+        grating_mask = current_object_mask_func(X_source, Y_source, stripe_period, angle=angle, dx_source=dx_source)
 
         # Combine with the Gaussian mask to form the overall object mask.
         current_object_mask = gaussian_mask * grating_mask
@@ -61,13 +61,16 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
         intensity_per_mode = I0 * np.ones((num_pixels, num_pixels)) / num_modes_per_shot
         
         # Initialize accumulator for shot's full-resolution intensity.
-        shot_intensity = np.zeros((2*num_pixels, 2*num_pixels))
+        shot_intensity = np.zeros((padding_factor*num_pixels, padding_factor*num_pixels))
 
         for mode in range(num_modes_per_shot):
             # Generate a new random phase pattern.
-            #random_phase = np.random.uniform(0, 2*np.pi, (num_pixels, num_pixels))
-            E_source = np.sqrt(intensity_per_mode)# * np.exp(1j * random_phase)
-            
+            if not incoherent:
+              E_source = np.sqrt(intensity_per_mode)# * np.exp(1j * random_phase)
+            else:
+              random_phase = np.random.uniform(0, 2*np.pi, (num_pixels, num_pixels))
+              E_source = np.sqrt(intensity_per_mode) * np.exp(1j * random_phase)
+                
             # Apply the object mask.
             E_after_object = E_source * current_object_mask
 
@@ -81,7 +84,9 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
                 plt.show()
 
             # Propagate the field.
+            print(np.sum(np.abs(E_after_object)**2))
             E_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source, padding_factor=padding_factor)
+            print(np.sum(np.abs(E_det)**2))
             I_det = np.abs(E_det)**2
 
             if shot == 0:
@@ -136,6 +141,61 @@ def compute_g2(intensity_images):
     I_per_pix = np.mean(avg_intensity)
     vertical_sum = np.sum(autocorr_avg, axis=0)
     return avg_intensity, autocorr_avg, vertical_sum, I_per_pix
+
+def compute_g2_reviewer(intensity_images):
+    avg_intensity = np.mean(intensity_images, axis=0)
+    N = avg_intensity.shape[0]
+
+    N_image2, N_image3, N_corr_c2 = 200, 100, 200
+    displace_x1, displace_y1, displace_x, displace_y = 0, 0, 0, 0
+
+    images_2 = intensity_images[:,
+              N//2 - N_image2 // 2 + displace_x1: N//2 + N_image2 // 2 + displace_x1,
+              N//2 - N_image2 // 2 + displace_y1: N//2 + N_image2 // 2 + displace_y1,
+              ]
+    
+    print(images_2.shape)
+    print(np.sum(images_2[:]**2))
+
+    c2j_2_zeros = np.zeros((N_image2, N_image2))
+    denominator = np.zeros((N_image2, N_image2))
+
+    # Compute g2 correlation
+    for q1, q11 in enumerate(range(-N_image2 // 2 - 1, N_image2 // 2 - 1)):
+        for q2, q22 in enumerate(range(-N_image2 // 2 - 1, N_image2 // 2 - 1)):
+            padded_images = np.pad(intensity_images, pad_width=((0,0),(intensity_images.shape[1], intensity_images.shape[1]), (intensity_images.shape[2], intensity_images.shape[2])),
+                          mode='constant', constant_values=0)
+
+            # Pad the image with zeros on each side
+            disp_padded_images = np.zeros((intensity_images.shape[0], intensity_images.shape[1] * 3, intensity_images.shape[2] * 3))
+            desired_position = [desired_position[0] + intensity_images.shape[1], desired_position[1] + intensity_images.shape[2]]
+            # Place the original image at the desired position
+            disp_padded_images[:, desired_position[0]:desired_position[0] + intensity_images.shape[1], desired_position[1]:desired_position[1] + intensity_images.shape[2]] = intensity_images
+
+            denominator[q2,q1] = np.sum(np.sum(np.mean(disp_padded_images,0 ) * np.mean(padded_images,0 )))
+
+    for image in intensity_images:
+        for q1, q11 in enumerate(range(-N_image2 // 2 - 1, N_image2 // 2 - 1)):
+        #for q1, q11 in enumerate(range(-1, 1)):
+            for q2, q22 in enumerate(range(-N_image2 // 2 - 1, N_image2 // 2 - 1)):
+        #    for q2, q22 in enumerate(range(-1, 1)):
+                #c2j_2[q2, q1] = g2_correlation_Lucas(image_2, [q11, q22])
+                desired_position = [q11, q22]
+
+                padded_image = np.pad(image, pad_width=((image.shape[0], image.shape[0]), (image.shape[1], image.shape[1])),
+                          mode='constant', constant_values=0)
+
+                # Pad the image with zeros on each side
+                disp_padded_image = np.zeros((image.shape[0] * 3, image.shape[1] * 3))
+                desired_position = [desired_position[0] + image.shape[0], desired_position[1] + image.shape[1]]
+                # Place the original image at the desired position
+                disp_padded_image[desired_position[0]:desired_position[0] + image.shape[0], desired_position[1]:desired_position[1] + image.shape[1]] = image
+                
+                numerator = np.sum(np.sum(disp_padded_image * padded_image))
+
+                c2j_2_zeros[q2, q1] = numerator/ denominator[q2, q1]
+
+    return c2j_2_zeros
 
 def compute_inclined_lineout(autocorr_avg, angle_deg=20, width=10):
     """

@@ -44,7 +44,7 @@ print(bool(2*np.abs(x_source[1]-x_source[0]) >= setup.wavelength*setup.z_prop/so
 
 gaussian_mask1 = create_gaussian_mask(X_source, Y_source, w=setup.gauss_width)
 extent = [x_source[0], x_source[-1], y_source[0], y_source[-1]]
-grating_mask1 = create_slit_pattern_rand_smooth(X_source, Y_source, setup.stripe_period, angle=73)
+grating_mask1 = create_slit_pattern_rand_smooth(X_source, Y_source, setup.stripe_period, angle=73, dx_source=dx_source)
 object_mask1 = gaussian_mask1 * grating_mask1
 
 print('Total photons at source: ', f'{setup.I0*np.sum(object_mask1):.2e}')
@@ -79,7 +79,7 @@ plt.plot(autocorr_avg[int(len(autocorr_avg)/2)])
 plt.show()
 
 plt.figure()
-plt.imshow(np.log10(np.abs(autocorr_avg - 1) + 1e-6), cmap="rainbow")
+plt.imshow(np.abs(autocorr_avg)-1 + 1e-6,norm=mcolors.LogNorm(), cmap="viridis")
 plt.title("Autocorrelation (g² proxy) - Log Scale")
 plt.xlabel("x (pixels)")
 plt.ylabel("y (pixels)")
@@ -93,7 +93,7 @@ padded_E = np.pad(autocorr_avg, ((pad_width, pad_width), (pad_width, pad_width))
 padded_N = padded_E.shape[0]
 
 extent = [-1/(2*dx_source), 1/(2*dx_source), -1/(2*dx_source), 1/(2*dx_source)]
-plt.imshow(np.abs(np.fft.fftshift(np.fft.fft2(padded_E)))-1, cmap='plasma', extent=extent)
+plt.imshow(np.abs(np.fft.fftshift(np.fft.fft2(padded_E)))-1, cmap='viridis', extent=extent, norm=mcolors.LogNorm())
 plt.title("Ensemble-Averaged Intensity Autocorrelation (g² proxy) - Log Scale")
 plt.xlabel("x (µm)")
 plt.ylabel("y (µm)")
