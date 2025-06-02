@@ -1,8 +1,8 @@
 # Simulation parameters:
 num_shots = 100
 num_modes_per_shot = 1
-I0 = 1e3
-z_prop = 1
+I0 = 1
+z_prop = 10
 wavelength = 2.75e-10
 angle = 73
 num_pixels = 275
@@ -19,4 +19,4 @@ gain = 1
 QE = 0.8
 ADC_bits = 18
 
-padding_factor = 2
+padding_factor = 4

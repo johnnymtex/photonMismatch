@@ -95,6 +95,21 @@ def create_slit_pattern_rand_smooth(X, Y, period=4e-6, duty_cycle=0.5, angle=0, 
     
     return pattern_smooth
 
+def create_slit_pattern_Trost(X, Y, period, angle, dx_source=0):
+    # Rotate the coordinates
+    angle = np.deg2rad(angle)
+    
+    X_rot = X * np.cos(angle) + Y * np.sin(angle)
+
+    mask = np.ones_like(X)
+    for i in range(X.shape[0]):
+        for j in range(X.shape[1]):
+            if (X_rot[i, j] % period) < period / 2:
+                mask[i, j] = 1
+            else:
+                mask[i, j] = -1
+    return mask
+
 
 def create_double_gaussian_mask(X, Y, sigma=30e-6, separation=0.5e-3, angle=0):
     """
