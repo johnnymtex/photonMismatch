@@ -11,10 +11,10 @@ def combined_propagation(E, wavelength, z, dx, threshold=1.0, padding_factor=1):
     Fresnel_number = aperture_size**2 / (wavelength * z)
     
     if Fresnel_number < threshold:
-        E_out = fraunhofer_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_det, y_det
-        return E_out
+        E_out, x_det, y_det = fraunhofer_propagation(E, wavelength, z, dx, padding_factor=padding_factor)
+        return E_out, x_det, y_det
     else:
-        E_out = fresnel_propagation(E, wavelength, z, dx, padding_factor=padding_factor)  # Unpack and discard x_out, y_out
+        E_out, x_det, y_det = fresnel_propagation(E, wavelength, z, dx, padding_factor=padding_factor)
         return E_out, x_det, y_det
     
     
