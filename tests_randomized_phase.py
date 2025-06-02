@@ -1,6 +1,5 @@
 # %%
-from propagation import fresnel_propagation
-from propagation_LP import fresnel_propagation as fresnel_lp
+from propagation import fresnel_propagation_doubleFFT as fresnel_propagation
 from focal_spot_pattern import create_gaussian_mask
 
 import numpy as np
