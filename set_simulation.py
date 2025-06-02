@@ -66,7 +66,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
         for mode in range(num_modes_per_shot):
             # Generate a new random phase pattern.
             if not incoherent:
-              E_source = np.sqrt(intensity_per_mode)# * np.exp(1j * random_phase)
+              E_source = np.sqrt(intensity_per_mode)
             else:
               random_phase = np.random.uniform(0, 2*np.pi, (num_pixels, num_pixels))
               E_source = np.sqrt(intensity_per_mode) * np.exp(1j * random_phase)
