@@ -61,7 +61,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
         intensity_per_mode = I0 * np.ones((num_pixels, num_pixels)) / num_modes_per_shot
         
         # Initialize accumulator for shot's full-resolution intensity.
-        shot_intensity = np.zeros((padding_factor*num_pixels, padding_factor*num_pixels))
+        shot_intensity = np.zeros((padding_factor*num_pixels-1, padding_factor*num_pixels-1))
 
         for mode in range(num_modes_per_shot):
             # Generate a new random phase pattern.
@@ -78,21 +78,23 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
                 # Plot amplitude and phase *after* the random phase is applied
                 intensity_to_plot = np.abs(E_after_object**2) * num_modes_per_shot
                 plt.figure(figsize=(8, 6))
-                plt.imshow(intensity_to_plot, cmap='plasma')
+                plt.imshow(intensity_to_plot, cmap='Greys')
                 plt.title(f"Total Source Intensity: {np.sum(intensity_to_plot):.2e} photons per pulse")
                 plt.colorbar()
                 plt.show()
 
             # Propagate the field.
-            print(np.sum(np.abs(E_after_object)**2))
-            E_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source, padding_factor=padding_factor)
-            print(np.sum(np.abs(E_det)**2))
+            E_det, x_det, y_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source, padding_factor=padding_factor)
             I_det = np.abs(E_det)**2
+            I_det /= np.max(I_det)
 
             if shot == 0:
+              extent = [np.min(x_det)/2*1e6, np.max(x_det)/2*1e6, np.min(y_det)/2*1e6, np.max(y_det)/2*1e6]
               plt.figure()
-              plt.imshow(I_det, cmap="plasma")
-              plt.title("I_det")
+              plt.imshow(I_det, extent=extent, cmap="Greys")
+              plt.title("Normalized intensity at detector")
+              plt.xlabel("x [$\mu$m]")
+              plt.ylabel("y [$\mu$m]")
               plt.colorbar()
               plt.show()
 
@@ -106,13 +108,18 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
 
         if shot == 0:
             plt.figure()
-            plt.imshow(shot_intensity_binned, cmap="plasma")
+            extent = [np.min(x_det)/2*1e6, np.max(x_det)/2*1e6, np.min(y_det)/2*1e6, np.max(y_det)/2*1e6]
+            plt.imshow(shot_intensity_binned, extent=extent, cmap="Greys")
+            plt.xlabel("x [$\mu$m]")
+            plt.xlabel("y [$\mu$m]")
+            plt.title("Binned intensity after detection")
+            plt.colorbar()
             plt.show()
 
         intensity_images.append(shot_intensity_binned)
         print(f"Completed Shot {shot+1}/{num_shots} - Photons per pixel: {np.sum(shot_intensity_binned)/((num_pixels/bin_factor)**2):.2f}")
     
-    return intensity_images, field_images
+    return intensity_images, field_images, x_det, y_det
 
 # ----------------------------------------------------------------------------
 # Function 2: Compute g² from the intensity images

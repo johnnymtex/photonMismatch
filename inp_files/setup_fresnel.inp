@@ -19,4 +19,4 @@ gain = 1
 QE = 0.8
 ADC_bits = 18
 
-padding_factor = 4
+padding_factor = 2
