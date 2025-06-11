@@ -77,10 +77,13 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
             if shot == 0 and mode == 0:  # Plot only for the first shot and mode
                 # Plot amplitude and phase *after* the random phase is applied
                 intensity_to_plot = np.abs(E_after_object**2) * num_modes_per_shot
+                extent = [np.min(X_source)*1e6, np.max(X_source)*1e6, np.min(Y_source)*1e6, np.max(Y_source)*1e6]
                 plt.figure(figsize=(8, 6))
-                plt.imshow(intensity_to_plot, cmap='Greys')
+                plt.imshow(intensity_to_plot, extent=extent, cmap='Greys')
                 plt.title(f"Total Source Intensity: {np.sum(intensity_to_plot):.2e} photons per pulse")
                 plt.colorbar()
+                plt.xlabel("x [$\mu$m]")
+                plt.ylabel("x [$\mu$m]")
                 plt.show()
 
             # Propagate the field.
@@ -89,7 +92,11 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
             I_det /= np.max(I_det)
 
             if shot == 0:
-              extent = [np.min(x_det)/2*1e6, np.max(x_det)/2*1e6, np.min(y_det)/2*1e6, np.max(y_det)/2*1e6]
+              print("\n######## Checking energy conservation... ########")
+              print(f"Before propagation: {np.sum(np.abs(E_after_object)**2)}")
+              print(f"After propagation: {np.sum(np.abs(E_det)**2)}")
+              print("#################################################\n")
+              extent = [np.min(x_det)*1e6, np.max(x_det)*1e6, np.min(y_det)*1e6, np.max(y_det)*1e6]
               plt.figure()
               plt.imshow(I_det, extent=extent, cmap="Greys")
               plt.title("Normalized intensity at detector")
@@ -108,7 +115,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
 
         if shot == 0:
             plt.figure()
-            extent = [np.min(x_det)/2*1e6, np.max(x_det)/2*1e6, np.min(y_det)/2*1e6, np.max(y_det)/2*1e6]
+            extent = [np.min(x_det)*1e6, np.max(x_det)*1e6, np.min(y_det)*1e6, np.max(y_det)*1e6]
             plt.imshow(shot_intensity_binned, extent=extent, cmap="Greys")
             plt.xlabel("x [$\mu$m]")
             plt.xlabel("y [$\mu$m]")

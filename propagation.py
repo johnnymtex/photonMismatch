@@ -66,8 +66,7 @@ def fraunhofer_propagation(E, wavelength, z, dx, padding_factor=1):
     input_spectrum = np.fft.fftshift(np.fft.fft2(np.fft.ifftshift(padded_E), norm='ortho'))
 
     # Coordinates in the observation plane
-    print(len(np.fft.fftfreq(N, d=dx)))
-    x_det = np.fft.fftshift(np.fft.fftfreq(N, d=dx)) * wavelength * z
+    x_det = fx * wavelength * z
     y_det = x_det.copy()
 
     k = 2 * np.pi / wavelength

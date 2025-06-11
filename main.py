@@ -73,7 +73,7 @@ print("\nCheckpoint 5a: Ensemble-Averaged Intensity")
 print("Min =", np.min(avg_intensity), "Max =", np.max(avg_intensity), "Avg =", np.mean(avg_intensity))
 print(f"Photons per pixel: {I_per_pix:.2f}")
 
-extent = [np.min(x_det)/2*1e6, np.max(x_det)/2*1e6, np.min(y_det)/2*1e6, np.max(y_det)/2*1e6]
+extent = [np.min(x_det_sim)*1e6, np.max(x_det_sim)*1e6, np.min(x_det_sim)*1e6, np.max(x_det_sim)*1e6]
 
 plt.figure()
 plt.imshow(autocorr_avg - 1 + 1e-6, norm=mcolors.LogNorm(), cmap="Greys", extent=extent)
@@ -85,7 +85,7 @@ plt.show()
 
 dx_aux = x_det[1]-x_det[0]
 
-extent = [-1/(2*dx_aux), 1/(2*dx_aux), -1/(2*dx_aux), 1/(2*dx_aux)]
+extent = [-1/(2*setup.padding_factor*dx_aux), 1/(2*setup.padding_factor*dx_aux), -1/(2*setup.padding_factor*dx_aux), 1/(2*setup.padding_factor*dx_aux)]
 
 plt.figure()
 plt.imshow(np.clip(np.abs(np.fft.fftshift(np.fft.fft2(autocorr_avg))), None, 1e6), cmap='Greys', norm=mcolors.LogNorm(), extent=extent)
