@@ -61,7 +61,7 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
         intensity_per_mode = I0 * np.ones((num_pixels, num_pixels)) / num_modes_per_shot
         
         # Initialize accumulator for shot's full-resolution intensity.
-        shot_intensity = np.zeros((padding_factor*num_pixels-1, padding_factor*num_pixels-1))
+        shot_intensity = np.zeros((padding_factor*num_pixels, padding_factor*num_pixels))
 
         for mode in range(num_modes_per_shot):
             # Generate a new random phase pattern.
@@ -89,14 +89,16 @@ def simulate_intensity_images(X_source, Y_source, num_shots, num_modes_per_shot,
             # Propagate the field.
             E_det, x_det, y_det = combined_propagation(E_after_object, wavelength, z_prop, dx_source, padding_factor=padding_factor)
             I_det = np.abs(E_det)**2
-            I_det /= np.max(I_det)
+            #I_det /= np.max(I_det)
 
             if shot == 0:
               print("\n######## Checking energy conservation... ########")
               print(f"Before propagation: {np.sum(np.abs(E_after_object)**2)}")
               print(f"After propagation: {np.sum(np.abs(E_det)**2)}")
               print("#################################################\n")
+
               extent = [np.min(x_det)*1e6, np.max(x_det)*1e6, np.min(y_det)*1e6, np.max(y_det)*1e6]
+
               plt.figure()
               plt.imshow(I_det, extent=extent, cmap="Greys")
               plt.title("Normalized intensity at detector")

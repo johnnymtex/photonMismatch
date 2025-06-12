@@ -88,7 +88,7 @@ dx_aux = x_det[1]-x_det[0]
 extent = [-1/(2*setup.padding_factor*dx_aux), 1/(2*setup.padding_factor*dx_aux), -1/(2*setup.padding_factor*dx_aux), 1/(2*setup.padding_factor*dx_aux)]
 
 plt.figure()
-plt.imshow(np.clip(np.abs(np.fft.fftshift(np.fft.fft2(autocorr_avg))), None, 1e6), cmap='Greys', norm=mcolors.LogNorm(), extent=extent)
+plt.imshow(np.clip(np.abs(np.fft.fftshift(np.fft.fft2(autocorr_avg))), None, 1.5e6), cmap='Greys', norm=mcolors.LogNorm(), extent=extent)
 plt.title("FFT Autocorrelation - Log scale")
 plt.xlabel("x (1/m)")
 plt.ylabel("y (1/m)")

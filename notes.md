@@ -1,0 +1,4 @@
+- modes per shot (check)
+- verificar dimensões de padrão pré e pós-propagação variando resolução & padding (resolução: check; padding: not yet)
+- ler binário/csv (amplitude & fase) com leitura só de amplitude caso haja mismatch de dimensões. re-sampling para as condições desejadas
+- clipping

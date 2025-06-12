@@ -1,15 +1,15 @@
 # Simulation parameters:
-num_shots = 100
+num_shots = 20
 num_modes_per_shot = 1
 I0 = 1
 z_prop = 1
 wavelength = 2.75e-10
 angle = 73
-num_pixels = 275
+num_pixels = 1024
 
 #spot parameters
 gauss_width = 25e-6
-stripe_period = 1e-6
+stripe_period = 5e-6
 grid_size = 195e-6
 
 # Detector parameters:
